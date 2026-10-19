@@ -1,0 +1,2532 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vẽ Hình Học Phẳng - Xưởng vẽ THCS & THPT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            overflow: hidden;
+        }
+        .font-mono-code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Math label font styling matching classic exam aesthetics */
+        .geo-label {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+            font-weight: 600;
+            cursor: move;
+            user-select: none;
+            paint-order: stroke;
+            stroke: rgba(255, 255, 255, 0.92);
+            stroke-width: 4px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .geo-point {
+            cursor: pointer;
+            transition: r 0.12s ease;
+        }
+        .geo-shape {
+            cursor: pointer;
+        }
+        .tool-btn.active {
+            background-color: #eff6ff;
+            border-color: #2563eb;
+            color: #1d4ed8;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.15);
+        }
+        .tool-btn.active .kbd-badge {
+            background-color: #2563eb;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen flex flex-col">
+
+    <!-- HEADER BAR -->
+    <header class="h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between shadow-sm z-20 shrink-0">
+        <!-- Brand & Shortcut Status -->
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
+                <i class="fa-solid fa-compass-drafting text-lg"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-bold text-slate-800 text-sm md:text-base tracking-tight">Xưởng Vẽ Hình Học Phẳng</h1>
+                    <span class="text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">THCS & THPT v1.0</span>
+                </div>
+                <p class="text-[11px] text-slate-500 hidden sm:block">Hình học động chuẩn đề thi Word &amp; LaTeX (tkz-euclide)</p>
+            </div>
+
+            <!-- Live 2-letter Key Buffer Indicator -->
+            <div id="keyBufferBadge" class="ml-3 flex items-center gap-2 bg-slate-900 text-white px-3 py-1 rounded-lg text-xs font-mono-code shadow-inner transition-all">
+                <span class="text-slate-400">Phím tắt:</span>
+                <span id="keyBufferText" class="font-bold text-amber-400 tracking-widest">CH</span>
+            </div>
+        </div>
+
+        <!-- Center Quick Actions -->
+        <div class="flex items-center gap-1.5">
+            <button onclick="app.undo()" id="btnUndo" title="Hoàn tác (Ctrl+Z)" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition">
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button onclick="app.redo()" id="btnRedo" title="Làm lại (Ctrl+Y)" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <div class="h-5 w-px bg-slate-200 mx-1"></div>
+
+            <button onclick="app.toggleGrid()" id="btnGrid" title="Bật/Tắt lưới tọa độ (G)" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-border-all"></i>
+                <span class="hidden md:inline">Lưới</span>
+            </button>
+            <button onclick="app.fitToView()" title="Căn vừa khung nhìn (Phím F)" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 border border-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-expand"></i>
+                <span class="hidden md:inline">Vừa khung (F)</span>
+            </button>
+            <button onclick="app.clearCanvasConfirm()" title="Xóa toàn bộ bản vẽ" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-trash-can"></i>
+                <span class="hidden md:inline">Xóa mới</span>
+            </button>
+        </div>
+
+        <!-- Right Export & Save Actions -->
+        <div class="flex items-center gap-2">
+            <button onclick="app.saveJSON()" title="Lưu file dự án (.json)" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 border border-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-download text-slate-500"></i>
+                <span class="hidden lg:inline">Lưu JSON</span>
+            </button>
+            <label title="Mở file dự án (.json)" class="cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 border border-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-folder-open text-amber-500"></i>
+                <span class="hidden lg:inline">Mở JSON</span>
+                <input type="file" accept=".json" class="hidden" onchange="app.loadJSON(event)">
+            </label>
+
+            <button onclick="app.openImageExportModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center gap-1.5">
+                <i class="fa-solid fa-file-word"></i>
+                <span>Chép vào Word / SVG</span>
+            </button>
+
+            <button onclick="app.openLatexModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1.5">
+                <i class="fa-solid fa-code"></i>
+                <span>Xuất TikZ (tkz-euclide)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN 3-COLUMN WORKSPACE -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- LEFT SIDEBAR: TOOLS & TEMPLATES -->
+        <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 z-10">
+            <!-- Tabs -->
+            <div class="grid grid-cols-2 border-b border-slate-200 bg-slate-50 p-1 gap-1">
+                <button id="tabBtnTools" onclick="app.switchLeftTab('tools')" class="py-1.5 text-xs font-semibold rounded-md bg-white text-blue-700 shadow-sm border border-slate-200/80 transition">
+                    <i class="fa-solid fa-screwdriver-wrench mr-1"></i>Dụng cụ dựng
+                </button>
+                <button id="tabBtnTemplates" onclick="app.switchLeftTab('templates')" class="py-1.5 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900 transition">
+                    <i class="fa-solid fa-shapes mr-1"></i>Hình mẫu (6-12)
+                </button>
+            </div>
+
+            <!-- Panel 1: Construction Tools -->
+            <div id="leftPanelTools" class="flex-1 overflow-y-auto p-3 space-y-4">
+                <!-- Shortcut Hint Banner -->
+                <div class="bg-amber-50 border border-amber-200/80 rounded-lg p-2.5 text-[11px] text-amber-900 leading-relaxed">
+                    <div class="font-semibold flex items-center gap-1.5 mb-0.5">
+                        <i class="fa-regular fa-keyboard text-amber-600"></i>
+                        <span>Mẹo gõ phím tắt 2 chữ cái:</span>
+                    </div>
+                    Gõ liên tiếp 2 phím (VD: <kbd class="px-1 py-0.5 bg-white border rounded font-mono-code text-[10px]">D</kbd><kbd class="px-1 py-0.5 bg-white border rounded font-mono-code text-[10px]">O</kbd> vẽ Đoạn, <kbd class="px-1 py-0.5 bg-white border rounded font-mono-code text-[10px]">T</kbd><kbd class="px-1 py-0.5 bg-white border rounded font-mono-code text-[10px]">D</kbd> Trung điểm, <kbd class="px-1 py-0.5 bg-white border rounded font-mono-code text-[10px]">Esc</kbd> về Chọn).
+                </div>
+
+                <!-- Tool Group 1: Cơ bản -->
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">1. Công cụ cơ bản</h3>
+                    <div class="grid grid-cols-2 gap-1.5" id="toolGroupBasic">
+                        <!-- Dynamically populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Tool Group 2: Phép dựng chính xác -->
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">2. Quan hệ &amp; Phép dựng</h3>
+                    <div class="grid grid-cols-2 gap-1.5" id="toolGroupConstruct">
+                        <!-- Dynamically populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Quick Parameter Construction Box -->
+                <div class="border-t border-slate-200 pt-3">
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">3. Dựng nhanh theo số đo</h3>
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-2">
+                        <div class="text-xs font-semibold text-slate-700">Tam giác ABC biết 3 cạnh (c-c-c)</div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <div>
+                                <label class="text-[10px] text-slate-500 block">AB (c)</label>
+                                <input id="paramAB" type="number" value="5" step="0.5" min="1" class="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 block">BC (a)</label>
+                                <input id="paramBC" type="number" value="7" step="0.5" min="1" class="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 block">CA (b)</label>
+                                <input id="paramCA" type="number" value="6" step="0.5" min="1" class="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white">
+                            </div>
+                        </div>
+                        <button onclick="app.constructParameterizedTriangle()" class="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Dựng tam giác theo số đo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Ready-made Templates -->
+            <div id="leftPanelTemplates" class="flex-1 overflow-y-auto p-3 space-y-2.5 hidden">
+                <p class="text-xs text-slate-500 px-1">Chọn một hình mẫu chuẩn GDPT 2018. Toàn bộ điểm và đường đều giữ nguyên tính chất hình học động khi kéo thả:</p>
+
+                <button onclick="app.loadTemplate('orthocenter')" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-semibold text-xs text-slate-800 group-hover:text-blue-700">1. Tam giác nội tiếp &amp; Trực tâm H</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Lớp 9-10</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Tam giác ABC nội tiếp (O), 3 đường cao AD, BE, CF cắt nhau tại H và trung điểm M của BC.</p>
+                </button>
+
+                <button onclick="app.loadTemplate('tangent')" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-semibold text-xs text-slate-800 group-hover:text-blue-700">2. Tiếp tuyến &amp; Cát tuyến từ điểm M</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Lớp 9</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Đường tròn (O), điểm M nằm ngoài, 2 tiếp tuyến MA, MB vuông góc bán kính, MO cắt AB tại H.</p>
+                </button>
+
+                <button onclick="app.loadTemplate('right_triangle')" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-semibold text-xs text-slate-800 group-hover:text-blue-700">3. Hệ thức lượng tam giác vuông</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Lớp 8-9</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Tam giác ABC vuông tại A, đường cao AH, hình chiếu HD, HE lên AB, AC.</p>
+                </button>
+
+                <button onclick="app.loadTemplate('pyramid_3d')" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-semibold text-xs text-slate-800 group-hover:text-blue-700">4. Hình chóp S.ABCD (Đáy hình bình hành)</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Lớp 11</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Hình chiếu trục đo chóp S.ABCD có SA vuông góc đáy, tâm O, tự động phân biệt nét khuất (nét đứt).</p>
+                </button>
+            </div>
+        </aside>
+
+        <!-- CENTER VIEWPORT: INTERACTIVE SVG CANVAS -->
+        <main class="flex-1 relative bg-white flex flex-col overflow-hidden">
+            <!-- Top Floating Instruction Banner -->
+            <div class="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
+                <div class="bg-white/95 backdrop-blur border border-slate-200 shadow-sm rounded-xl px-3.5 py-2 flex items-center gap-2.5 pointer-events-auto">
+                    <span id="activeToolIcon" class="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-arrow-pointer"></i>
+                    </span>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="activeToolTitle" class="text-xs font-bold text-slate-800">Chọn &amp; Di chuyển (CH)</span>
+                            <span id="stepProgressBadge" class="hidden text-[10px] font-semibold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">Bước 1/2</span>
+                        </div>
+                        <p id="activeToolHint" class="text-[11px] text-slate-500">Kéo điểm tự do để thay đổi hình, kéo tên điểm để chỉnh vị trí nhãn, hoặc bấm chọn đối tượng.</p>
+                    </div>
+                </div>
+
+                <!-- Zoom & Coords HUD -->
+                <div class="flex items-center gap-1.5 bg-white/95 backdrop-blur border border-slate-200 shadow-sm rounded-xl p-1 pointer-events-auto">
+                    <span id="mouseCoordDisplay" class="text-[11px] font-mono-code text-slate-500 px-2 border-r border-slate-200">(0.0, 0.0)</span>
+                    <button onclick="app.zoomBy(1.2)" title="Phóng to" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-600 text-xs"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                    <span id="zoomPercentDisplay" class="text-[11px] font-semibold text-slate-700 w-12 text-center">100%</span>
+                    <button onclick="app.zoomBy(0.833)" title="Thu nhỏ" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-600 text-xs"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                </div>
+            </div>
+
+            <!-- Main Interactive SVG -->
+            <div id="canvasContainer" class="flex-1 w-full h-full relative cursor-default overflow-hidden">
+                <svg id="geoSvg" class="w-full h-full block" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <!-- Grid Pattern -->
+                        <pattern id="minorGrid" width="25" height="25" patternUnits="userSpaceOnUse">
+                            <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+                        </pattern>
+                        <pattern id="majorGrid" width="100" height="100" patternUnits="userSpaceOnUse">
+                            <rect width="100" height="100" fill="url(#minorGrid)"/>
+                            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#e2e8f0" stroke-width="1.2"/>
+                        </pattern>
+                    </defs>
+
+                    <!-- Background Grid Layer -->
+                    <g id="gridLayer"></g>
+
+                    <!-- Geometry Layers (Ordered Bottom to Top) -->
+                    <g id="polygonLayer"></g>
+                    <g id="angleLayer"></g>
+                    <g id="circleLayer"></g>
+                    <g id="lineLayer"></g>
+                    <g id="previewLayer"></g>
+                    <g id="pointLayer"></g>
+                    <g id="labelLayer"></g>
+                </svg>
+            </div>
+
+            <!-- Bottom Quick Legend Bar -->
+            <div class="h-8 bg-slate-50 border-t border-slate-200 px-4 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+                <div class="flex items-center gap-4">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> Điểm tự do (Kéo được)</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-700 inline-block"></span> Điểm phụ thuộc (Tự động cập nhật)</span>
+                    <span class="hidden md:flex items-center gap-1.5"><i class="fa-regular fa-hand"></i> Giữ phím <b>Space + Kéo chuột</b> (hoặc chuột giữa) để dịch chuyển bản vẽ</span>
+                </div>
+                <div id="objectCountDisplay" class="font-medium text-slate-600">0 điểm, 0 đường</div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR: INSPECTOR & OBJECT TREE -->
+        <aside class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 z-10">
+            <!-- Selected Object Inspector -->
+            <div class="p-3.5 border-b border-slate-200 bg-slate-50/50">
+                <div class="flex items-center justify-between mb-2.5">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Thuộc tính &amp; Trình bày</h2>
+                    <span id="selectedTypeBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-700">Chưa chọn</span>
+                </div>
+
+                <!-- Empty Selection State -->
+                <div id="inspectorEmpty" class="py-6 text-center text-xs text-slate-400">
+                    <i class="fa-solid fa-arrow-pointer text-lg mb-1.5 block text-slate-300"></i>
+                    Bấm vào một Điểm, Đoạn thẳng hoặc Đường tròn trên bản vẽ để tinh chỉnh kiểu nét, tên nhãn hoặc ký hiệu.
+                </div>
+
+                <!-- Populated Inspector Form -->
+                <div id="inspectorForm" class="space-y-3 hidden">
+                    <!-- Name & Visibility Row -->
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1">
+                            <label class="text-[11px] font-medium text-slate-600 block mb-1">Tên nhãn (Label)</label>
+                            <input id="propLabelInput" type="text" oninput="app.updateSelectedProp('label', this.value)" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-semibold">
+                        </div>
+                        <div class="pt-4 flex items-center gap-1">
+                            <button id="propShowLabelBtn" onclick="app.toggleSelectedProp('showLabel')" title="Hiện/Ẩn tên nhãn" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-100">
+                                <i class="fa-solid fa-tag"></i> Nhãn
+                            </button>
+                            <button onclick="app.deleteSelected()" title="Xóa đối tượng (Delete)" class="p-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Construction Definition Formula -->
+                    <div class="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-600">
+                        <span class="font-semibold text-slate-500">Cách dựng:</span>
+                        <span id="propDefinitionText" class="ml-1 font-medium text-slate-800">Điểm tự do</span>
+                    </div>
+
+                    <!-- Line / Circle Specific Styling -->
+                    <div id="propLineStyleGroup" class="space-y-2.5 pt-1">
+                        <div>
+                            <label class="text-[11px] font-medium text-slate-600 block mb-1">Kiểu nét (Nét liền / Nét đứt phụ)</label>
+                            <div class="grid grid-cols-3 gap-1.5">
+                                <button onclick="app.updateSelectedProp('dash', 'solid')" id="btnStyleSolid" class="py-1.5 px-2 text-xs font-medium rounded-lg border border-slate-300 hover:bg-slate-100">Nét liền</button>
+                                <button onclick="app.updateSelectedProp('dash', 'dashed')" id="btnStyleDashed" class="py-1.5 px-2 text-xs font-medium rounded-lg border border-slate-300 hover:bg-slate-100">Nét đứt (- -)</button>
+                                <button onclick="app.updateSelectedProp('dash', 'dotted')" id="btnStyleDotted" class="py-1.5 px-2 text-xs font-medium rounded-lg border border-slate-300 hover:bg-slate-100">Nét chấm (···)</button>
+                            </div>
+                        </div>
+
+                        <!-- Tick Marks for Segments -->
+                        <div id="propTickGroup">
+                            <label class="text-[11px] font-medium text-slate-600 block mb-1">Ký hiệu đoạn bằng nhau</label>
+                            <div class="grid grid-cols-4 gap-1">
+                                <button onclick="app.updateSelectedProp('ticks', 0)" class="py-1 text-xs border border-slate-300 rounded hover:bg-slate-100">Không</button>
+                                <button onclick="app.updateSelectedProp('ticks', 1)" class="py-1 text-xs border border-slate-300 rounded hover:bg-slate-100 font-mono-code">|</button>
+                                <button onclick="app.updateSelectedProp('ticks', 2)" class="py-1 text-xs border border-slate-300 rounded hover:bg-slate-100 font-mono-code">||</button>
+                                <button onclick="app.updateSelectedProp('ticks', 3)" class="py-1 text-xs border border-slate-300 rounded hover:bg-slate-100 font-mono-code">|||</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Color & Stroke Width -->
+                    <div class="flex items-center justify-between pt-1">
+                        <div>
+                            <label class="text-[11px] font-medium text-slate-600 block mb-1">Màu sắc</label>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="app.updateSelectedProp('color', '#0f172a')" class="w-5 h-5 rounded-full bg-slate-900 border border-white ring-1 ring-slate-300"></button>
+                                <button onclick="app.updateSelectedProp('color', '#2563eb')" class="w-5 h-5 rounded-full bg-blue-600 border border-white ring-1 ring-slate-300"></button>
+                                <button onclick="app.updateSelectedProp('color', '#dc2626')" class="w-5 h-5 rounded-full bg-red-600 border border-white ring-1 ring-slate-300"></button>
+                                <button onclick="app.updateSelectedProp('color', '#059669')" class="w-5 h-5 rounded-full bg-emerald-600 border border-white ring-1 ring-slate-300"></button>
+                                <button onclick="app.updateSelectedProp('color', '#7c3aed')" class="w-5 h-5 rounded-full bg-violet-600 border border-white ring-1 ring-slate-300"></button>
+                                <button onclick="app.updateSelectedProp('color', '#64748b')" class="w-5 h-5 rounded-full bg-slate-500 border border-white ring-1 ring-slate-300"></button>
+                            </div>
+                        </div>
+                        <div class="w-24">
+                            <label class="text-[11px] font-medium text-slate-600 block mb-1">Độ dày nét</label>
+                            <select id="propWidthSelect" onchange="app.updateSelectedProp('width', parseFloat(this.value))" class="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg bg-white">
+                                <option value="1.2">Mảnh (1.2pt)</option>
+                                <option value="1.8">Chuẩn in (1.8pt)</option>
+                                <option value="2.5">Đậm (2.5pt)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Construction History / Object Tree -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <div class="px-3.5 py-2.5 border-b border-slate-200 flex items-center justify-between bg-white">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Danh sách &amp; Lịch sử dựng</h3>
+                    <button onclick="app.toggleAllAuxiliaryLines()" class="text-[11px] text-blue-600 hover:underline font-medium">Ẩn/Hiện nét đứt</button>
+                </div>
+                <div id="objectListContainer" class="flex-1 overflow-y-auto p-2 space-y-1">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- MODAL 1: EXPORT WORD / PNG / SVG -->
+    <div id="imageExportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 flex flex-col">
+            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <i class="fa-solid fa-file-image"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">Xuất hình đưa vào đề thi (Word / SVG)</h3>
+                        <p class="text-xs text-slate-500">Đã tự động cắt sát lề, ẩn lưới tọa độ và làm nét chữ chuẩn in ấn</p>
+                    </div>
+                </div>
+                <button onclick="app.closeModals()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="p-5 bg-slate-50 flex flex-col items-center justify-center min-h-[280px] max-h-[420px] overflow-auto border-b border-slate-200">
+                <div id="exportSvgPreviewBox" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-center">
+                    <!-- Cropped SVG preview injected here -->
+                </div>
+            </div>
+
+            <div class="px-5 py-4 bg-white flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3 text-xs text-slate-600">
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" id="exportBlackWhiteCheck" onchange="app.refreshExportPreview()" class="rounded text-blue-600">
+                        <span>Đơn sắc (Đen trắng 100% để in đề)</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                        <span>Độ phân giải:</span>
+                        <select id="exportScaleSelect" class="border border-slate-300 rounded px-1.5 py-0.5 bg-white">
+                            <option value="2">Chuẩn (2x)</option>
+                            <option value="3" selected>Siêu nét (3x - Khuyên dùng)</option>
+                            <option value="4">In ấn (4x)</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="app.copyPngToClipboard()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center gap-1.5">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>Chép ảnh vào Word (Ctrl+V)</span>
+                    </button>
+                    <button onclick="app.downloadPng()" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-900 text-white transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Tải PNG</span>
+                    </button>
+                    <button onclick="app.downloadSvg()" class="px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-300 hover:bg-slate-100 text-slate-700 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-bezier-curve"></i>
+                        <span>Tải Vector SVG</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: EXPORT LATEX (TKZ-EUCLIDE) -->
+    <div id="latexExportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden border border-slate-200 flex flex-col">
+            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                        <i class="fa-solid fa-code"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">Xuất mã LaTeX chuẩn <code class="font-mono-code text-indigo-600">tkz-euclide</code> / <code class="font-mono-code text-indigo-600">TikZ</code></h3>
+                        <p class="text-xs text-slate-500">Tự động chuyển đổi phả hệ dựng hình (trung điểm, hình chiếu, giao điểm, góc vuông) sang mã LaTeX</p>
+                    </div>
+                </div>
+                <button onclick="app.closeModals()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="p-4 bg-slate-900 text-slate-100 font-mono-code text-xs overflow-auto max-h-[420px]">
+                <pre id="latexCodeOutput" class="whitespace-pre-wrap select-all leading-relaxed"></pre>
+            </div>
+
+            <div class="px-5 py-3.5 bg-white border-t border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-3 text-xs text-slate-600">
+                    <label class="flex items-center gap-1.5">
+                        <span>Tỉ lệ khung hình (Scale):</span>
+                        <input id="latexScaleInput" type="number" value="1.0" step="0.1" min="0.2" max="3.0" onchange="app.generateLatexCode()" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs">
+                    </label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="app.copyLatexCode()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1.5">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>Sao chép mã LaTeX</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toastNotification" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium flex items-center gap-2 z-50 opacity-0 pointer-events-none transition-all duration-200">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastText">Đã sao chép!</span>
+    </div>
+
+    <!-- APPLICATION LOGIC -->
+    <script>
+        /**
+         * XƯỞNG VẼ HÌNH HỌC PHẲNG - DYNAMIC GEOMETRY ENGINE & EXAM STUDIO
+         * Supports:
+         * - 2-Letter Vietnamese Keyboard Shortcuts (CH, DI, DO, DT, TI, DG, TR, TD, VG, SS, HC, PG, GD, GV)
+         * - Dynamic Dependency Graph (Free points, Midpoints, Projections, Intersections, Perpendiculars, Parallels, Bisectors)
+         * - Draggable Math Labels, Right-angle auto-markers, Segment tick marks
+         * - Tight-crop PNG/SVG Export & Automatic tkz-euclide LaTeX Code Generator
+         */
+        class GeometryStudioApp {
+            constructor() {
+                // Math coordinate system: 1 math unit = 50 pixels at zoom 1.0
+                this.unitPixels = 50;
+                this.zoom = 1.0;
+                this.panX = 450;
+                this.panY = 320;
+                this.showGrid = true;
+
+                // Scene graph
+                this.objects = [];
+                this.selectedId = null;
+                this.hoveredId = null;
+
+                // Undo / Redo stacks
+                this.history = [];
+                this.redoStack = [];
+
+                // Active tool & multi-step clicks
+                this.activeTool = 'CH';
+                this.toolPoints = [];
+                this.toolTempObjects = [];
+                this.mouseWorld = { x: 0, y: 0 };
+
+                // Dragging states
+                this.dragMode = null; // 'point' | 'label' | 'pan'
+                this.dragTargetId = null;
+                this.dragStartMouse = { x: 0, y: 0 };
+                this.dragStartPan = { x: 0, y: 0 };
+                this.spacePressed = false;
+
+                // 2-Letter Vietnamese Shortcut Buffer
+                this.keyBuffer = '';
+                this.keyBufferTimer = null;
+
+                this.defineTools();
+                this.initDOM();
+                this.bindEvents();
+
+                // Load saved state or default orthocenter figure
+                const saved = localStorage.getItem('ve_hhphang_state_v1');
+                if (saved) {
+                    try {
+                        this.deserialize(saved, false);
+                    } catch (e) {
+                        this.loadTemplate('orthocenter', false);
+                    }
+                } else {
+                    this.loadTemplate('orthocenter', false);
+                }
+
+                this.fitToView();
+                this.render();
+            }
+
+            defineTools() {
+                this.tools = {
+                    // Group 1: Basic
+                    'CH': {
+                        code: 'CH', group: 'basic', name: 'Chọn / Di chuyển', icon: 'fa-arrow-pointer',
+                        hint: 'Kéo điểm tự do để biến đổi hình, kéo chữ cái để chỉnh vị trí tên điểm.'
+                    },
+                    'DI': {
+                        code: 'DI', group: 'basic', name: 'Điểm mới', icon: 'fa-circle-dot',
+                        hint: 'Bấm lên vùng trống để tạo điểm tự do, hoặc bấm lên đường/đường tròn để gắn điểm.'
+                    },
+                    'DO': {
+                        code: 'DO', group: 'basic', name: 'Đoạn thẳng', icon: 'fa-minus',
+                        hint: 'Chọn Điểm đầu, sau đó chọn Điểm cuối để nối đoạn thẳng.'
+                    },
+                    'DT': {
+                        code: 'DT', group: 'basic', name: 'Đường thẳng', icon: 'fa-lines-leaning',
+                        hint: 'Chọn 2 điểm để vẽ đường thẳng đi qua 2 điểm đó.'
+                    },
+                    'TI': {
+                        code: 'TI', group: 'basic', name: 'Tia', icon: 'fa-arrow-right-long',
+                        hint: 'Chọn điểm gốc của tia, sau đó chọn điểm thứ hai xác định hướng.'
+                    },
+                    'DG': {
+                        code: 'DG', group: 'basic', name: 'Tam giác / Đa giác', icon: 'fa-draw-polygon',
+                        hint: 'Bấm lần lượt các đỉnh đa giác, bấm lại vào đỉnh đầu tiên để khép kín.'
+                    },
+                    'TR': {
+                        code: 'TR', group: 'basic', name: 'Đường tròn', icon: 'fa-regular fa-circle',
+                        hint: 'Chọn điểm Tâm đường tròn, sau đó chọn 1 điểm trên đường tròn.'
+                    },
+
+                    // Group 2: Dynamic Constraints
+                    'TD': {
+                        code: 'TD', group: 'construct', name: 'Trung điểm', icon: 'fa-arrows-left-right-to-line',
+                        hint: 'Chọn 2 điểm (hoặc bấm trực tiếp vào 1 đoạn thẳng) để dựng trung điểm.'
+                    },
+                    'HC': {
+                        code: 'HC', group: 'construct', name: 'Hình chiếu vuông góc', icon: 'fa-down-long',
+                        hint: 'Chọn 1 Điểm, sau đó chọn Đường thẳng/Đoạn thẳng để hạ chân đường vuông góc (kèm góc vuông).'
+                    },
+                    'VG': {
+                        code: 'VG', group: 'construct', name: 'Đường vuông góc', icon: 'fa-grip-lines-vertical',
+                        hint: 'Chọn 1 Điểm và 1 Đường thẳng/Đoạn thẳng để dựng đường vuông góc đi qua điểm đó.'
+                    },
+                    'SS': {
+                        code: 'SS', group: 'construct', name: 'Đường song song', icon: 'fa-equals',
+                        hint: 'Chọn 1 Điểm và 1 Đường thẳng/Đoạn thẳng để dựng đường thẳng song song.'
+                    },
+                    'PG': {
+                        code: 'PG', group: 'construct', name: 'Phân giác góc', icon: 'fa-share-nodes',
+                        hint: 'Chọn 3 điểm theo thứ tự: Điểm cạnh 1 -> Đỉnh góc -> Điểm cạnh 2.'
+                    },
+                    'GD': {
+                        code: 'GD', group: 'construct', name: 'Giao điểm', icon: 'fa-xmark',
+                        hint: 'Chọn 2 đối tượng (Đường thẳng, Đoạn thẳng hoặc Đường tròn) để lấy giao điểm.'
+                    },
+                    'GV': {
+                        code: 'GV', group: 'construct', name: 'Đánh dấu góc vuông', icon: 'fa-vector-square',
+                        hint: 'Chọn 3 điểm (Cạnh 1 -> Đỉnh góc vuông -> Cạnh 2) để vẽ ký hiệu góc vuông.'
+                    }
+                };
+            }
+
+            initDOM() {
+                this.svg = document.getElementById('geoSvg');
+                this.gridLayer = document.getElementById('gridLayer');
+                this.polygonLayer = document.getElementById('polygonLayer');
+                this.angleLayer = document.getElementById('angleLayer');
+                this.circleLayer = document.getElementById('circleLayer');
+                this.lineLayer = document.getElementById('lineLayer');
+                this.previewLayer = document.getElementById('previewLayer');
+                this.pointLayer = document.getElementById('pointLayer');
+                this.labelLayer = document.getElementById('labelLayer');
+
+                // Render Sidebar Tool Buttons
+                const basicContainer = document.getElementById('toolGroupBasic');
+                const constructContainer = document.getElementById('toolGroupConstruct');
+
+                Object.values(this.tools).forEach(t => {
+                    const btn = document.createElement('button');
+                    btn.id = `toolBtn_${t.code}`;
+                    btn.onclick = () => this.setTool(t.code);
+                    btn.className = `tool-btn flex items-center justify-between p-2 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-slate-50 text-left transition ${t.code === this.activeTool ? 'active' : ''}`;
+                    btn.innerHTML = `
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i class="fa-solid ${t.icon} text-xs w-4 text-center"></i>
+                            <span class="text-xs font-medium truncate">${t.name}</span>
+                        </div>
+                        <span class="kbd-badge text-[10px] font-mono-code font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">${t.code}</span>
+                    `;
+                    if (t.group === 'basic') basicContainer.appendChild(btn);
+                    else constructContainer.appendChild(btn);
+                });
+            }
+
+            // =========================================================================
+            // COORDINATE CONVERSIONS
+            // =========================================================================
+            worldToScreen(wx, wy) {
+                return {
+                    x: this.panX + wx * this.unitPixels * this.zoom,
+                    y: this.panY - wy * this.unitPixels * this.zoom
+                };
+            }
+
+            screenToWorld(sx, sy) {
+                return {
+                    x: (sx - this.panX) / (this.unitPixels * this.zoom),
+                    y: (this.panY - sy) / (this.unitPixels * this.zoom)
+                };
+            }
+
+            // =========================================================================
+            // OBJECT GRAPH & MATHEMATICAL SOLVER
+            // =========================================================================
+            getObj(id) {
+                return this.objects.find(o => o.id === id);
+            }
+
+            getNextPointLabel(preferred = null) {
+                const used = new Set(this.objects.filter(o => o.kind === 'point').map(o => o.label));
+                if (preferred && !used.has(preferred)) return preferred;
+                const alphabet = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','P','Q','R','S','T','U','V','O'];
+                for (const ch of alphabet) {
+                    if (!used.has(ch)) return ch;
+                }
+                for (const ch of alphabet) {
+                    if (!used.has(ch + "'")) return ch + "'";
+                }
+                return 'P' + (this.objects.length + 1);
+            }
+
+            uid(prefix = 'obj') {
+                return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
+            }
+
+            /**
+             * Evaluates all dependent objects in topological/creation order.
+             */
+            recomputeAll() {
+                for (const obj of this.objects) {
+                    obj.valid = true;
+
+                    if (obj.kind === 'point') {
+                        if (obj.rule === 'free') {
+                            // Coordinates x, y are directly stored
+                        } else if (obj.rule === 'midpoint') {
+                            const p1 = this.getObj(obj.parents[0]);
+                            const p2 = this.getObj(obj.parents[1]);
+                            if (!p1 || !p2 || !p1.valid || !p2.valid) { obj.valid = false; continue; }
+                            obj.x = (p1.x + p2.x) / 2;
+                            obj.y = (p1.y + p2.y) / 2;
+                        } else if (obj.rule === 'on_line') {
+                            const line = this.getObj(obj.parents[0]);
+                            const geom = this.getLineGeometry(line);
+                            if (!geom) { obj.valid = false; continue; }
+                            const t = obj.tParam ?? 0.5;
+                            obj.x = geom.x1 + t * (geom.x2 - geom.x1);
+                            obj.y = geom.y1 + t * (geom.y2 - geom.y1);
+                        } else if (obj.rule === 'on_circle') {
+                            const circle = this.getObj(obj.parents[0]);
+                            const cGeom = this.getCircleGeometry(circle);
+                            if (!cGeom) { obj.valid = false; continue; }
+                            const ang = obj.angleParam ?? 0;
+                            obj.x = cGeom.cx + cGeom.r * Math.cos(ang);
+                            obj.y = cGeom.cy + cGeom.r * Math.sin(ang);
+                        } else if (obj.rule === 'projection') {
+                            const pt = this.getObj(obj.parents[0]);
+                            const line = this.getObj(obj.parents[1]);
+                            const geom = this.getLineGeometry(line);
+                            if (!pt || !pt.valid || !geom) { obj.valid = false; continue; }
+                            const proj = this.projectPointOnLine(pt.x, pt.y, geom.x1, geom.y1, geom.x2, geom.y2);
+                            obj.x = proj.x;
+                            obj.y = proj.y;
+                        } else if (obj.rule === 'intersection') {
+                            const o1 = this.getObj(obj.parents[0]);
+                            const o2 = this.getObj(obj.parents[1]);
+                            const pts = this.computeIntersectionPoints(o1, o2);
+                            const idx = obj.branchIndex || 0;
+                            if (!pts || !pts[idx]) {
+                                obj.valid = false;
+                            } else {
+                                obj.x = pts[idx].x;
+                                obj.y = pts[idx].y;
+                            }
+                        }
+                    }
+                }
+            }
+
+            getLineGeometry(obj) {
+                if (!obj || !obj.valid || obj.kind !== 'line') return null;
+
+                if (obj.rule === 'two_points' || obj.rule === 'segment' || obj.rule === 'ray') {
+                    const p1 = this.getObj(obj.parents[0]);
+                    const p2 = this.getObj(obj.parents[1]);
+                    if (!p1 || !p2 || !p1.valid || !p2.valid) return null;
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    if (Math.hypot(dx, dy) < 1e-7) return null;
+                    return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, subType: obj.rule };
+                }
+
+                if (obj.rule === 'perpendicular') {
+                    const pt = this.getObj(obj.parents[0]);
+                    const refLine = this.getObj(obj.parents[1]);
+                    const refG = this.getLineGeometry(refLine);
+                    if (!pt || !pt.valid || !refG) return null;
+                    const dx = refG.x2 - refG.x1;
+                    const dy = refG.y2 - refG.y1;
+                    return { x1: pt.x, y1: pt.y, x2: pt.x - dy, y2: pt.y + dx, subType: 'line' };
+                }
+
+                if (obj.rule === 'parallel') {
+                    const pt = this.getObj(obj.parents[0]);
+                    const refLine = this.getObj(obj.parents[1]);
+                    const refG = this.getLineGeometry(refLine);
+                    if (!pt || !pt.valid || !refG) return null;
+                    const dx = refG.x2 - refG.x1;
+                    const dy = refG.y2 - refG.y1;
+                    return { x1: pt.x, y1: pt.y, x2: pt.x + dx, y2: pt.y + dy, subType: 'line' };
+                }
+
+                if (obj.rule === 'bisector') {
+                    const A = this.getObj(obj.parents[0]);
+                    const B = this.getObj(obj.parents[1]); // Vertex
+                    const C = this.getObj(obj.parents[2]);
+                    if (!A || !B || !C || !A.valid || !B.valid || !C.valid) return null;
+                    const v1x = A.x - B.x, v1y = A.y - B.y;
+                    const v2x = C.x - B.x, v2y = C.y - B.y;
+                    const l1 = Math.hypot(v1x, v1y), l2 = Math.hypot(v2x, v2y);
+                    if (l1 < 1e-7 || l2 < 1e-7) return null;
+                    const bx = v1x / l1 + v2x / l2;
+                    const by = v1y / l1 + v2y / l2;
+                    return { x1: B.x, y1: B.y, x2: B.x + bx, y2: B.y + by, subType: 'ray' };
+                }
+
+                return null;
+            }
+
+            getCircleGeometry(obj) {
+                if (!obj || !obj.valid || obj.kind !== 'circle') return null;
+                const center = this.getObj(obj.parents[0]);
+                if (!center || !center.valid) return null;
+
+                if (obj.rule === 'center_point') {
+                    const pt = this.getObj(obj.parents[1]);
+                    if (!pt || !pt.valid) return null;
+                    const r = Math.hypot(pt.x - center.x, pt.y - center.y);
+                    if (r < 1e-7) return null;
+                    return { cx: center.x, cy: center.y, r };
+                } else if (obj.rule === 'center_radius') {
+                    return { cx: center.x, cy: center.y, r: obj.radius || 3 };
+                }
+                return null;
+            }
+
+            projectPointOnLine(px, py, x1, y1, x2, y2) {
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const len2 = dx * dx + dy * dy;
+                if (len2 < 1e-10) return { x: x1, y: y1, t: 0 };
+                const t = ((px - x1) * dx + (py - y1) * dy) / len2;
+                return { x: x1 + t * dx, y: y1 + t * dy, t };
+            }
+
+            computeIntersectionPoints(o1, o2) {
+                if (!o1 || !o2 || !o1.valid || !o2.valid) return [];
+
+                // Line - Line
+                if (o1.kind === 'line' && o2.kind === 'line') {
+                    const g1 = this.getLineGeometry(o1);
+                    const g2 = this.getLineGeometry(o2);
+                    if (!g1 || !g2) return [];
+                    const x1 = g1.x1, y1 = g1.y1, x2 = g1.x2, y2 = g1.y2;
+                    const x3 = g2.x1, y3 = g2.y1, x4 = g2.x2, y4 = g2.y2;
+                    const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+                    if (Math.abs(denom) < 1e-9) return [];
+                    const px = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom;
+                    const py = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom;
+                    return [{ x: px, y: py }];
+                }
+
+                // Line - Circle
+                if ((o1.kind === 'line' && o2.kind === 'circle') || (o1.kind === 'circle' && o2.kind === 'line')) {
+                    const lineObj = o1.kind === 'line' ? o1 : o2;
+                    const circObj = o1.kind === 'circle' ? o1 : o2;
+                    const lg = this.getLineGeometry(lineObj);
+                    const cg = this.getCircleGeometry(circObj);
+                    if (!lg || !cg) return [];
+                    const proj = this.projectPointOnLine(cg.cx, cg.cy, lg.x1, lg.y1, lg.x2, lg.y2);
+                    const d = Math.hypot(proj.x - cg.cx, proj.y - cg.cy);
+                    if (d > cg.r + 1e-7) return [];
+                    const h = Math.sqrt(Math.max(0, cg.r * cg.r - d * d));
+                    const len = Math.hypot(lg.x2 - lg.x1, lg.y2 - lg.y1);
+                    const ux = (lg.x2 - lg.x1) / len;
+                    const uy = (lg.y2 - lg.y1) / len;
+                    return [
+                        { x: proj.x - h * ux, y: proj.y - h * uy },
+                        { x: proj.x + h * ux, y: proj.y + h * uy }
+                    ];
+                }
+
+                // Circle - Circle
+                if (o1.kind === 'circle' && o2.kind === 'circle') {
+                    const c1 = this.getCircleGeometry(o1);
+                    const c2 = this.getCircleGeometry(o2);
+                    if (!c1 || !c2) return [];
+                    const dx = c2.cx - c1.cx;
+                    const dy = c2.cy - c1.cy;
+                    const d = Math.hypot(dx, dy);
+                    if (d > c1.r + c2.r || d < Math.abs(c1.r - c2.r) || d < 1e-8) return [];
+                    const a = (c1.r * c1.r - c2.r * c2.r + d * d) / (2 * d);
+                    const h = Math.sqrt(Math.max(0, c1.r * c1.r - a * a));
+                    const x2 = c1.cx + a * (dx / d);
+                    const y2 = c1.cy + a * (dy / d);
+                    return [
+                        { x: x2 + h * (dy / d), y: y2 - h * (dx / d) },
+                        { x: x2 - h * (dy / d), y: y2 + h * (dx / d) }
+                    ];
+                }
+
+                return [];
+            }
+
+            // =========================================================================
+            // OBJECT CREATION HELPERS
+            // =========================================================================
+            addPoint({ rule = 'free', x = 0, y = 0, parents = [], label = null, showLabel = true, color = null, tParam = 0.5, angleParam = 0, branchIndex = 0, labelOffset = null }) {
+                const isFree = rule === 'free' || rule === 'on_line' || rule === 'on_circle';
+                const ptLabel = label || this.getNextPointLabel();
+                const obj = {
+                    id: this.uid('pt'),
+                    kind: 'point',
+                    rule,
+                    x,
+                    y,
+                    parents,
+                    tParam,
+                    angleParam,
+                    branchIndex,
+                    label: ptLabel,
+                    showLabel,
+                    hidden: false,
+                    color: color || (isFree ? '#2563eb' : '#0f172a'),
+                    width: isFree ? 4.2 : 3.4,
+                    labelOffset: labelOffset || { dx: 10, dy: -10 },
+                    valid: true
+                };
+                this.objects.push(obj);
+                this.recomputeAll();
+                return obj;
+            }
+
+            addLine({ rule = 'segment', parents = [], dash = 'solid', color = '#0f172a', width = 1.8, ticks = 0, label = '', showLabel = false }) {
+                const obj = {
+                    id: this.uid('ln'),
+                    kind: 'line',
+                    rule, // 'segment' | 'two_points' | 'ray' | 'perpendicular' | 'parallel' | 'bisector'
+                    parents,
+                    dash,
+                    color,
+                    width,
+                    ticks,
+                    label,
+                    showLabel,
+                    hidden: false,
+                    labelOffset: { dx: 8, dy: -8 },
+                    valid: true
+                };
+                this.objects.push(obj);
+                this.recomputeAll();
+                return obj;
+            }
+
+            addCircle({ rule = 'center_point', parents = [], radius = 3, dash = 'solid', color = '#0f172a', width = 1.8 }) {
+                const obj = {
+                    id: this.uid('cr'),
+                    kind: 'circle',
+                    rule,
+                    parents,
+                    radius,
+                    dash,
+                    color,
+                    width,
+                    label: '',
+                    showLabel: false,
+                    hidden: false,
+                    valid: true
+                };
+                this.objects.push(obj);
+                this.recomputeAll();
+                return obj;
+            }
+
+            addRightAngleMark(p1Id, vertexId, p2Id) {
+                const obj = {
+                    id: this.uid('ang'),
+                    kind: 'angle_right',
+                    rule: 'right_mark',
+                    parents: [p1Id, vertexId, p2Id],
+                    color: '#0f172a',
+                    width: 1.3,
+                    hidden: false,
+                    valid: true
+                };
+                this.objects.push(obj);
+                return obj;
+            }
+
+            addPolygon(pointIds, color = '#3b82f6') {
+                const obj = {
+                    id: this.uid('poly'),
+                    kind: 'polygon',
+                    rule: 'polygon',
+                    parents: [...pointIds],
+                    color,
+                    hidden: false,
+                    valid: true
+                };
+                this.objects.push(obj);
+                return obj;
+            }
+
+            // =========================================================================
+            // HIT TESTING & SNAPPING
+            // =========================================================================
+            findHitObject(screenX, screenY) {
+                // 1. Check Labels first so user can always reposition overlapping labels
+                for (let i = this.objects.length - 1; i >= 0; i--) {
+                    const o = this.objects[i];
+                    if (o.hidden || !o.valid || o.kind !== 'point' || !o.showLabel) continue;
+                    const sp = this.worldToScreen(o.x, o.y);
+                    const lx = sp.x + (o.labelOffset?.dx || 10);
+                    const ly = sp.y + (o.labelOffset?.dy || -10);
+                    if (Math.hypot(screenX - lx, screenY - ly) < 14) {
+                        return { type: 'label', obj: o };
+                    }
+                }
+
+                // 2. Check Points (high priority)
+                for (let i = this.objects.length - 1; i >= 0; i--) {
+                    const o = this.objects[i];
+                    if (o.hidden || !o.valid || o.kind !== 'point') continue;
+                    const sp = this.worldToScreen(o.x, o.y);
+                    if (Math.hypot(screenX - sp.x, screenY - sp.y) < 11) {
+                        return { type: 'point', obj: o };
+                    }
+                }
+
+                // 3. Check Lines & Circles
+                const worldPt = this.screenToWorld(screenX, screenY);
+                const thresholdWorld = 8 / (this.unitPixels * this.zoom);
+
+                for (let i = this.objects.length - 1; i >= 0; i--) {
+                    const o = this.objects[i];
+                    if (o.hidden || !o.valid) continue;
+
+                    if (o.kind === 'line') {
+                        const g = this.getLineGeometry(o);
+                        if (!g) continue;
+                        const proj = this.projectPointOnLine(worldPt.x, worldPt.y, g.x1, g.y1, g.x2, g.y2);
+                        if (g.subType === 'segment' && (proj.t < -0.02 || proj.t > 1.02)) continue;
+                        if (g.subType === 'ray' && proj.t < -0.02) continue;
+                        const dist = Math.hypot(worldPt.x - proj.x, worldPt.y - proj.y);
+                        if (dist <= thresholdWorld) {
+                            return { type: 'shape', obj: o, proj };
+                        }
+                    } else if (o.kind === 'circle') {
+                        const cg = this.getCircleGeometry(o);
+                        if (!cg) continue;
+                        const distToCenter = Math.hypot(worldPt.x - cg.cx, worldPt.y - cg.cy);
+                        if (Math.abs(distToCenter - cg.r) <= thresholdWorld) {
+                            const angle = Math.atan2(worldPt.y - cg.cy, worldPt.x - cg.cx);
+                            return { type: 'shape', obj: o, angle };
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            // =========================================================================
+            // INTERACTIVE TOOL STATE MACHINE
+            // =========================================================================
+            setTool(code) {
+                if (!this.tools[code]) return;
+                this.activeTool = code;
+                this.toolPoints = [];
+                this.toolTempObjects = [];
+
+                // Update sidebar active state
+                document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(`toolBtn_${code}`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Update Top Banner
+                const t = this.tools[code];
+                document.getElementById('activeToolIcon').innerHTML = `<i class="fa-solid ${t.icon}"></i>`;
+                document.getElementById('activeToolTitle').textContent = `${t.name} (${t.code})`;
+                document.getElementById('activeToolHint').textContent = t.hint;
+                document.getElementById('stepProgressBadge').classList.add('hidden');
+                document.getElementById('keyBufferText').textContent = code;
+
+                this.render();
+            }
+
+            updateStepBadge(stepText) {
+                const badge = document.getElementById('stepProgressBadge');
+                if (!stepText) {
+                    badge.classList.add('hidden');
+                } else {
+                    badge.textContent = stepText;
+                    badge.classList.remove('hidden');
+                }
+            }
+
+            getOrCreatePointFromClick(screenX, screenY) {
+                const hit = this.findHitObject(screenX, screenY);
+                if (hit && hit.type === 'point') {
+                    return hit.obj;
+                }
+                const w = this.screenToWorld(screenX, screenY);
+                if (hit && hit.type === 'shape') {
+                    if (hit.obj.kind === 'line') {
+                        return this.addPoint({ rule: 'on_line', parents: [hit.obj.id], tParam: hit.proj.t });
+                    } else if (hit.obj.kind === 'circle') {
+                        return this.addPoint({ rule: 'on_circle', parents: [hit.obj.id], angleParam: hit.angle });
+                    }
+                }
+                // Snap to 0.5 grid if grid is on and shift pressed, else smooth coordinates
+                return this.addPoint({
+                    rule: 'free',
+                    x: Math.round(w.x * 4) / 4,
+                    y: Math.round(w.y * 4) / 4
+                });
+            }
+
+            handleCanvasClick(e) {
+                const rect = this.svg.getBoundingClientRect();
+                const sx = e.clientX - rect.left;
+                const sy = e.clientY - rect.top;
+                const hit = this.findHitObject(sx, sy);
+
+                // Tool: CH (Select)
+                if (this.activeTool === 'CH') {
+                    if (hit) {
+                        this.selectObject(hit.obj.id);
+                    } else {
+                        this.selectObject(null);
+                    }
+                    return;
+                }
+
+                // Tool: DI (Create Point or Intersection if 2 objects are close)
+                if (this.activeTool === 'DI') {
+                    this.saveSnapshot();
+                    const pt = this.getOrCreatePointFromClick(sx, sy);
+                    this.selectObject(pt.id);
+                    this.render();
+                    return;
+                }
+
+                // Tool: DO (Segment), DT (Line), TI (Ray), TR (Circle)
+                if (['DO', 'DT', 'TI', 'TR'].includes(this.activeTool)) {
+                    this.saveSnapshot();
+                    const pt = this.getOrCreatePointFromClick(sx, sy);
+                    this.toolPoints.push(pt.id);
+
+                    if (this.toolPoints.length === 1) {
+                        this.updateStepBadge('Bước 2/2: Chọn điểm thứ hai');
+                    } else if (this.toolPoints.length === 2) {
+                        const [p1, p2] = this.toolPoints;
+                        if (p1 !== p2) {
+                            let created = null;
+                            if (this.activeTool === 'DO') created = this.addLine({ rule: 'segment', parents: [p1, p2] });
+                            if (this.activeTool === 'DT') created = this.addLine({ rule: 'two_points', parents: [p1, p2] });
+                            if (this.activeTool === 'TI') created = this.addLine({ rule: 'ray', parents: [p1, p2] });
+                            if (this.activeTool === 'TR') created = this.addCircle({ rule: 'center_point', parents: [p1, p2] });
+                            if (created) this.selectObject(created.id);
+                        }
+                        this.toolPoints = [];
+                        this.updateStepBadge(null);
+                    }
+                    this.render();
+                    return;
+                }
+
+                // Tool: DG (Polygon / Triangle)
+                if (this.activeTool === 'DG') {
+                    this.saveSnapshot();
+                    const pt = this.getOrCreatePointFromClick(sx, sy);
+                    if (this.toolPoints.length >= 3 && pt.id === this.toolPoints[0]) {
+                        // Close polygon
+                        for (let i = 0; i < this.toolPoints.length; i++) {
+                            const a = this.toolPoints[i];
+                            const b = this.toolPoints[(i + 1) % this.toolPoints.length];
+                            this.addLine({ rule: 'segment', parents: [a, b] });
+                        }
+                        this.addPolygon(this.toolPoints);
+                        this.toolPoints = [];
+                        this.updateStepBadge(null);
+                    } else {
+                        if (this.toolPoints.length > 0) {
+                            const prev = this.toolPoints[this.toolPoints.length - 1];
+                            if (prev !== pt.id) this.toolPoints.push(pt.id);
+                        } else {
+                            this.toolPoints.push(pt.id);
+                        }
+                        this.updateStepBadge(`Đã chọn ${this.toolPoints.length} đỉnh (Bấm lại đỉnh đầu để khép kín)`);
+                    }
+                    this.render();
+                    return;
+                }
+
+                // Tool: TD (Midpoint)
+                if (this.activeTool === 'TD') {
+                    if (hit && hit.type === 'shape' && hit.obj.kind === 'line' && hit.obj.rule === 'segment') {
+                        this.saveSnapshot();
+                        const [p1, p2] = hit.obj.parents;
+                        const mid = this.addPoint({ rule: 'midpoint', parents: [p1, p2], label: this.getNextPointLabel('M') });
+                        this.selectObject(mid.id);
+                        this.render();
+                        return;
+                    }
+                    if (hit && hit.type === 'point') {
+                        this.toolPoints.push(hit.obj.id);
+                        if (this.toolPoints.length === 1) {
+                            this.updateStepBadge('Bước 2/2: Chọn điểm thứ hai');
+                        } else if (this.toolPoints.length === 2) {
+                            this.saveSnapshot();
+                            const mid = this.addPoint({ rule: 'midpoint', parents: [this.toolPoints[0], this.toolPoints[1]], label: this.getNextPointLabel('M') });
+                            this.selectObject(mid.id);
+                            this.toolPoints = [];
+                            this.updateStepBadge(null);
+                        }
+                        this.render();
+                    }
+                    return;
+                }
+
+                // Tool: HC (Foot of Perpendicular), VG (Perpendicular Line), SS (Parallel Line)
+                if (['HC', 'VG', 'SS'].includes(this.activeTool)) {
+                    if (!hit) return;
+                    if (hit.type === 'point' || (hit.type === 'shape' && hit.obj.kind === 'line')) {
+                        this.toolTempObjects.push(hit.obj);
+                        const ptObj = this.toolTempObjects.find(o => o.kind === 'point');
+                        const lnObj = this.toolTempObjects.find(o => o.kind === 'line');
+
+                        if (ptObj && lnObj) {
+                            this.saveSnapshot();
+                            if (this.activeTool === 'HC') {
+                                const foot = this.addPoint({
+                                    rule: 'projection',
+                                    parents: [ptObj.id, lnObj.id],
+                                    label: this.getNextPointLabel('H')
+                                });
+                                // Also draw the altitude segment and automatic right angle marker
+                                this.addLine({ rule: 'segment', parents: [ptObj.id, foot.id], dash: 'solid', width: 1.5 });
+                                const refPtId = lnObj.parents[0] !== foot.id ? lnObj.parents[0] : lnObj.parents[1];
+                                if (refPtId) {
+                                    this.addRightAngleMark(ptObj.id, foot.id, refPtId);
+                                }
+                                this.selectObject(foot.id);
+                            } else if (this.activeTool === 'VG') {
+                                const perp = this.addLine({ rule: 'perpendicular', parents: [ptObj.id, lnObj.id] });
+                                this.selectObject(perp.id);
+                            } else if (this.activeTool === 'SS') {
+                                const para = this.addLine({ rule: 'parallel', parents: [ptObj.id, lnObj.id] });
+                                this.selectObject(para.id);
+                            }
+                            this.toolTempObjects = [];
+                            this.updateStepBadge(null);
+                        } else {
+                            this.updateStepBadge(ptObj ? 'Bước 2/2: Chọn Đường thẳng / Đoạn thẳng' : 'Bước 2/2: Chọn Điểm');
+                        }
+                        this.render();
+                    }
+                    return;
+                }
+
+                // Tool: PG (Angle Bisector) or GV (Right Angle Mark) - 3 Points
+                if (['PG', 'GV'].includes(this.activeTool)) {
+                    if (hit && hit.type === 'point') {
+                        this.toolPoints.push(hit.obj.id);
+                        if (this.toolPoints.length === 1) {
+                            this.updateStepBadge('Bước 2/3: Chọn Đỉnh góc');
+                        } else if (this.toolPoints.length === 2) {
+                            this.updateStepBadge('Bước 3/3: Chọn điểm trên cạnh thứ hai');
+                        } else if (this.toolPoints.length === 3) {
+                            this.saveSnapshot();
+                            const [p1, v, p2] = this.toolPoints;
+                            if (this.activeTool === 'PG') {
+                                const bis = this.addLine({ rule: 'bisector', parents: [p1, v, p2], dash: 'dashed' });
+                                this.selectObject(bis.id);
+                            } else {
+                                this.addRightAngleMark(p1, v, p2);
+                            }
+                            this.toolPoints = [];
+                            this.updateStepBadge(null);
+                        }
+                        this.render();
+                    }
+                    return;
+                }
+
+                // Tool: GD (Intersection of 2 shapes)
+                if (this.activeTool === 'GD') {
+                    if (hit && hit.type === 'shape' && (hit.obj.kind === 'line' || hit.obj.kind === 'circle')) {
+                        this.toolTempObjects.push(hit.obj);
+                        if (this.toolTempObjects.length === 1) {
+                            this.updateStepBadge('Bước 2/2: Chọn đối tượng thứ hai để lấy giao điểm');
+                        } else if (this.toolTempObjects.length === 2) {
+                            const [o1, o2] = this.toolTempObjects;
+                            if (o1.id !== o2.id) {
+                                const pts = this.computeIntersectionPoints(o1, o2);
+                                if (pts.length > 0) {
+                                    this.saveSnapshot();
+                                    pts.forEach((p, idx) => {
+                                        // Avoid creating duplicate intersection at same location
+                                        const exists = this.objects.some(existing =>
+                                            existing.kind === 'point' &&
+                                            existing.valid &&
+                                            Math.hypot(existing.x - p.x, existing.y - p.y) < 0.08
+                                        );
+                                        if (!exists) {
+                                            const created = this.addPoint({
+                                                rule: 'intersection',
+                                                parents: [o1.id, o2.id],
+                                                branchIndex: idx
+                                            });
+                                            this.selectObject(created.id);
+                                        }
+                                    });
+                                } else {
+                                    this.showToast('Hai đối tượng không cắt nhau!');
+                                }
+                            }
+                            this.toolTempObjects = [];
+                            this.updateStepBadge(null);
+                        }
+                        this.render();
+                    }
+                }
+            }
+
+            // =========================================================================
+            // SVG RENDERING ENGINE
+            // =========================================================================
+            render() {
+                this.recomputeAll();
+                this.renderGrid();
+                this.renderPolygons();
+                this.renderRightAngles();
+                this.renderCircles();
+                this.renderLines();
+                this.renderPreview();
+                this.renderPointsAndLabels();
+                this.updateInspectorUI();
+                this.updateObjectListUI();
+                this.saveToLocalStorage();
+            }
+
+            renderGrid() {
+                if (!this.showGrid) {
+                    this.gridLayer.innerHTML = '';
+                    return;
+                }
+                const rect = this.svg.getBoundingClientRect();
+                const w = rect.width || 1000;
+                const h = rect.height || 700;
+                const step = this.unitPixels * this.zoom;
+
+                let html = '';
+                // Minor grid lines
+                const startX = ((this.panX % step) + step) % step;
+                const startY = ((this.panY % step) + step) % step;
+
+                for (let x = startX; x < w; x += step) {
+                    const isAxis = Math.abs(x - this.panX) < 1;
+                    html += `<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${isAxis ? '#cbd5e1' : '#f1f5f9'}" stroke-width="${isAxis ? 1.5 : 1}"/>`;
+                }
+                for (let y = startY; y < h; y += step) {
+                    const isAxis = Math.abs(y - this.panY) < 1;
+                    html += `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${isAxis ? '#cbd5e1' : '#f1f5f9'}" stroke-width="${isAxis ? 1.5 : 1}"/>`;
+                }
+                this.gridLayer.innerHTML = html;
+            }
+
+            renderPolygons() {
+                let html = '';
+                for (const obj of this.objects) {
+                    if (obj.hidden || !obj.valid || obj.kind !== 'polygon') continue;
+                    const pts = obj.parents.map(id => this.getObj(id)).filter(p => p && p.valid);
+                    if (pts.length < 3) continue;
+                    const pointsAttr = pts.map(p => {
+                        const s = this.worldToScreen(p.x, p.y);
+                        return `${s.x.toFixed(1)},${s.y.toFixed(1)}`;
+                    }).join(' ');
+                    html += `<polygon points="${pointsAttr}" fill="${obj.color}" fill-opacity="0.06" stroke="none"/>`;
+                }
+                this.polygonLayer.innerHTML = html;
+            }
+
+            renderRightAngles() {
+                let html = '';
+                const sizePx = 13;
+                for (const obj of this.objects) {
+                    if (obj.hidden || !obj.valid || obj.kind !== 'angle_right') continue;
+                    const p1 = this.getObj(obj.parents[0]);
+                    const v = this.getObj(obj.parents[1]);
+                    const p2 = this.getObj(obj.parents[2]);
+                    if (!p1 || !v || !p2 || !p1.valid || !v.valid || !p2.valid) continue;
+
+                    const s1 = this.worldToScreen(p1.x, p1.y);
+                    const sv = this.worldToScreen(v.x, v.y);
+                    const s2 = this.worldToScreen(p2.x, p2.y);
+
+                    const d1 = Math.hypot(s1.x - sv.x, s1.y - sv.y);
+                    const d2 = Math.hypot(s2.x - sv.x, s2.y - sv.y);
+                    if (d1 < 5 || d2 < 5) continue;
+
+                    const u1x = (s1.x - sv.x) / d1, u1y = (s1.y - sv.y) / d1;
+                    const u2x = (s2.x - sv.x) / d2, u2y = (s2.y - sv.y) / d2;
+
+                    // Verify actual angle is close to 90 degrees (dot product ~ 0)
+                    const dot = Math.abs(u1x * u2x + u1y * u2y);
+                    if (dot > 0.15) continue;
+
+                    const c1x = sv.x + u1x * sizePx, c1y = sv.y + u1y * sizePx;
+                    const c2x = sv.x + (u1x + u2x) * sizePx, c2y = sv.y + (u1y + u2y) * sizePx;
+                    const c3x = sv.x + u2x * sizePx, c3y = sv.y + u2y * sizePx;
+
+                    html += `<polyline points="${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${c3x.toFixed(1)},${c3y.toFixed(1)}" fill="rgba(37, 99, 235, 0.08)" stroke="${obj.color}" stroke-width="1.2"/>`;
+                }
+                this.angleLayer.innerHTML = html;
+            }
+
+            getStrokeDashArray(dash) {
+                if (dash === 'dashed') return '7, 5';
+                if (dash === 'dotted') return '2, 4';
+                return '';
+            }
+
+            renderCircles() {
+                let html = '';
+                for (const obj of this.objects) {
+                    if (obj.hidden || !obj.valid || obj.kind !== 'circle') continue;
+                    const cg = this.getCircleGeometry(obj);
+                    if (!cg) continue;
+                    const sc = this.worldToScreen(cg.cx, cg.cy);
+                    const sr = cg.r * this.unitPixels * this.zoom;
+                    const isSelected = obj.id === this.selectedId;
+                    const isHovered = obj.id === this.hoveredId;
+                    const dashAttr = this.getStrokeDashArray(obj.dash);
+
+                    if (isSelected || isHovered) {
+                        html += `<circle cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" r="${sr.toFixed(1)}" fill="none" stroke="#3b82f6" stroke-width="${obj.width + 5}" stroke-opacity="0.22"/>`;
+                    }
+                    html += `<circle class="geo-shape" cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" r="${sr.toFixed(1)}" fill="none" stroke="${obj.color}" stroke-width="${obj.width}" ${dashAttr ? `stroke-dasharray="${dashAttr}"` : ''}/>`;
+                }
+                this.circleLayer.innerHTML = html;
+            }
+
+            renderLines() {
+                let html = '';
+                const rect = this.svg.getBoundingClientRect();
+                const diag = Math.hypot(rect.width || 1200, rect.height || 900) * 1.5;
+
+                for (const obj of this.objects) {
+                    if (obj.hidden || !obj.valid || obj.kind !== 'line') continue;
+                    const g = this.getLineGeometry(obj);
+                    if (!g) continue;
+
+                    const s1 = this.worldToScreen(g.x1, g.y1);
+                    const s2 = this.worldToScreen(g.x2, g.y2);
+                    const dx = s2.x - s1.x;
+                    const dy = s2.y - s1.y;
+                    const len = Math.hypot(dx, dy);
+                    if (len < 1e-4) continue;
+                    const ux = dx / len, uy = dy / len;
+
+                    let drawX1 = s1.x, drawY1 = s1.y, drawX2 = s2.x, drawY2 = s2.y;
+                    if (g.subType !== 'segment') {
+                        if (g.subType === 'ray') {
+                            drawX2 = s1.x + ux * diag;
+                            drawY2 = s1.y + uy * diag;
+                        } else {
+                            drawX1 = s1.x - ux * diag;
+                            drawY1 = s1.y - uy * diag;
+                            drawX2 = s1.x + ux * diag;
+                            drawY2 = s1.y + uy * diag;
+                        }
+                    }
+
+                    const isSelected = obj.id === this.selectedId;
+                    const isHovered = obj.id === this.hoveredId;
+                    const dashAttr = this.getStrokeDashArray(obj.dash);
+
+                    if (isSelected || isHovered) {
+                        html += `<line x1="${drawX1.toFixed(1)}" y1="${drawY1.toFixed(1)}" x2="${drawX2.toFixed(1)}" y2="${drawY2.toFixed(1)}" stroke="#3b82f6" stroke-width="${obj.width + 6}" stroke-opacity="0.22" stroke-linecap="round"/>`;
+                    }
+
+                    html += `<line class="geo-shape" x1="${drawX1.toFixed(1)}" y1="${drawY1.toFixed(1)}" x2="${drawX2.toFixed(1)}" y2="${drawY2.toFixed(1)}" stroke="${obj.color}" stroke-width="${obj.width}" stroke-linecap="round" ${dashAttr ? `stroke-dasharray="${dashAttr}"` : ''}/>`;
+
+                    // Render Equal Segment Tick Marks
+                    if (g.subType === 'segment' && obj.ticks > 0) {
+                        const mx = (s1.x + s2.x) / 2;
+                        const my = (s1.y + s2.y) / 2;
+                        const nx = -uy, ny = ux;
+                        const tickHalf = 5.5;
+                        const spacing = 4.5;
+                        const startOffset = -((obj.ticks - 1) * spacing) / 2;
+                        for (let k = 0; k < obj.ticks; k++) {
+                            const off = startOffset + k * spacing;
+                            const cx = mx + ux * off;
+                            const cy = my + uy * off;
+                            html += `<line x1="${(cx - nx * tickHalf).toFixed(1)}" y1="${(cy - ny * tickHalf).toFixed(1)}" x2="${(cx + nx * tickHalf).toFixed(1)}" y2="${(cy + ny * tickHalf).toFixed(1)}" stroke="${obj.color}" stroke-width="1.5"/>`;
+                        }
+                    }
+                }
+                this.lineLayer.innerHTML = html;
+            }
+
+            renderPreview() {
+                let html = '';
+                if (this.toolPoints.length > 0) {
+                    const lastPt = this.getObj(this.toolPoints[this.toolPoints.length - 1]);
+                    if (lastPt && lastPt.valid) {
+                        const s1 = this.worldToScreen(lastPt.x, lastPt.y);
+                        const s2 = this.worldToScreen(this.mouseWorld.x, this.mouseWorld.y);
+
+                        if (['DO', 'DT', 'TI', 'DG'].includes(this.activeTool)) {
+                            html += `<line x1="${s1.x}" y1="${s1.y}" x2="${s2.x}" y2="${s2.y}" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"/>`;
+                        } else if (this.activeTool === 'TR') {
+                            const r = Math.hypot(s2.x - s1.x, s2.y - s1.y);
+                            html += `<circle cx="${s1.x}" cy="${s1.y}" r="${r}" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"/>`;
+                        }
+                    }
+                }
+                this.previewLayer.innerHTML = html;
+            }
+
+            renderPointsAndLabels() {
+                let ptHtml = '';
+                let lblHtml = '';
+
+                let ptCount = 0;
+                let shapeCount = 0;
+
+                for (const obj of this.objects) {
+                    if (obj.hidden || !obj.valid) continue;
+                    if (obj.kind === 'line' || obj.kind === 'circle') shapeCount++;
+                    if (obj.kind !== 'point') continue;
+                    ptCount++;
+
+                    const sp = this.worldToScreen(obj.x, obj.y);
+                    const isSelected = obj.id === this.selectedId || this.toolPoints.includes(obj.id);
+                    const isHovered = obj.id === this.hoveredId;
+                    const isFree = obj.rule === 'free' || obj.rule === 'on_line' || obj.rule === 'on_circle';
+
+                    if (isSelected || isHovered) {
+                        ptHtml += `<circle cx="${sp.x.toFixed(1)}" cy="${sp.y.toFixed(1)}" r="9" fill="#3b82f6" fill-opacity="0.25"/>`;
+                    }
+
+                    ptHtml += `<circle class="geo-point" cx="${sp.x.toFixed(1)}" cy="${sp.y.toFixed(1)}" r="${isFree ? 4.2 : 3.3}" fill="${isFree ? obj.color : '#0f172a'}" stroke="#ffffff" stroke-width="1.4"/>`;
+
+                    if (obj.showLabel && obj.label) {
+                        const lx = sp.x + (obj.labelOffset?.dx || 10);
+                        const ly = sp.y + (obj.labelOffset?.dy || -10);
+                        lblHtml += `<text class="geo-label" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="16" fill="#0f172a" text-anchor="middle" dominant-baseline="central">${obj.label}</text>`;
+                    }
+                }
+
+                this.pointLayer.innerHTML = ptHtml;
+                this.labelLayer.innerHTML = lblHtml;
+                document.getElementById('objectCountDisplay').textContent = `${ptCount} điểm, ${shapeCount} đường`;
+            }
+
+            // =========================================================================
+            // INSPECTOR & OBJECT LIST SIDEBAR
+            // =========================================================================
+            selectObject(id) {
+                this.selectedId = id;
+                this.render();
+            }
+
+            getRuleDescription(obj) {
+                if (obj.kind === 'point') {
+                    if (obj.rule === 'free') return `Điểm tự do (${obj.x.toFixed(2)}; ${obj.y.toFixed(2)})`;
+                    if (obj.rule === 'midpoint') return `Trung điểm của ${this.getObjLabel(obj.parents[0])}${this.getObjLabel(obj.parents[1])}`;
+                    if (obj.rule === 'projection') return `Hình chiếu vuông góc của ${this.getObjLabel(obj.parents[0])}`;
+                    if (obj.rule === 'intersection') return `Giao điểm 2 đối tượng`;
+                    if (obj.rule === 'on_circle') return `Điểm thuộc đường tròn`;
+                    if (obj.rule === 'on_line') return `Điểm thuộc đường thẳng`;
+                }
+                if (obj.kind === 'line') {
+                    const p1 = this.getObjLabel(obj.parents[0]);
+                    const p2 = this.getObjLabel(obj.parents[1]);
+                    if (obj.rule === 'segment') return `Đoạn thẳng ${p1}${p2}`;
+                    if (obj.rule === 'two_points') return `Đường thẳng qua ${p1}, ${p2}`;
+                    if (obj.rule === 'ray') return `Tia ${p1}${p2}`;
+                    if (obj.rule === 'perpendicular') return `Đường vuông góc qua ${p1}`;
+                    if (obj.rule === 'parallel') return `Đường song song qua ${p1}`;
+                    if (obj.rule === 'bisector') return `Phân giác góc ${p1}${p2}${this.getObjLabel(obj.parents[2])}`;
+                }
+                if (obj.kind === 'circle') {
+                    return `Đường tròn tâm ${this.getObjLabel(obj.parents[0])} qua ${this.getObjLabel(obj.parents[1])}`;
+                }
+                return obj.kind;
+            }
+
+            getObjLabel(id) {
+                const o = this.getObj(id);
+                return o ? (o.label || o.id) : '?';
+            }
+
+            updateInspectorUI() {
+                const obj = this.getObj(this.selectedId);
+                const emptyEl = document.getElementById('inspectorEmpty');
+                const formEl = document.getElementById('inspectorForm');
+                const badgeEl = document.getElementById('selectedTypeBadge');
+
+                if (!obj) {
+                    emptyEl.classList.remove('hidden');
+                    formEl.classList.add('hidden');
+                    badgeEl.textContent = 'Chưa chọn';
+                    return;
+                }
+
+                emptyEl.classList.add('hidden');
+                formEl.classList.remove('hidden');
+
+                badgeEl.textContent = obj.kind === 'point' ? 'Điểm' : (obj.kind === 'line' ? 'Đường / Đoạn' : 'Đường tròn');
+                document.getElementById('propLabelInput').value = obj.label || '';
+                document.getElementById('propDefinitionText').textContent = this.getRuleDescription(obj);
+
+                const showLblBtn = document.getElementById('propShowLabelBtn');
+                showLblBtn.className = `px-2.5 py-1.5 rounded-lg border text-xs font-medium transition ${obj.showLabel ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-300 text-slate-500'}`;
+
+                const lineGroup = document.getElementById('propLineStyleGroup');
+                const tickGroup = document.getElementById('propTickGroup');
+                if (obj.kind === 'line' || obj.kind === 'circle') {
+                    lineGroup.classList.remove('hidden');
+                    tickGroup.classList.toggle('hidden', !(obj.kind === 'line' && obj.rule === 'segment'));
+                } else {
+                    lineGroup.classList.add('hidden');
+                }
+            }
+
+            updateObjectListUI() {
+                const container = document.getElementById('objectListContainer');
+                let html = '';
+
+                for (const obj of this.objects) {
+                    if (obj.kind === 'polygon' || obj.kind === 'angle_right') continue;
+                    const isSelected = obj.id === this.selectedId;
+                    const icon = obj.kind === 'point' ? 'fa-circle-dot text-blue-600' : (obj.kind === 'circle' ? 'fa-regular fa-circle text-emerald-600' : 'fa-minus text-slate-600');
+                    const title = obj.kind === 'point' ? `Điểm ${obj.label}` : this.getRuleDescription(obj);
+
+                    html += `
+                        <div onclick="app.selectObject('${obj.id}')" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer text-xs transition ${isSelected ? 'bg-blue-50 border border-blue-200 text-blue-900 font-semibold' : 'hover:bg-slate-50 text-slate-700 border border-transparent'}">
+                            <div class="flex items-center gap-2 truncate">
+                                <i class="fa-solid ${icon} w-4 text-center"></i>
+                                <span class="truncate ${obj.hidden ? 'line-through text-slate-400' : ''}">${title}</span>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button onclick="event.stopPropagation(); app.toggleObjectHidden('${obj.id}')" title="Ẩn/Hiện" class="p-1 text-slate-400 hover:text-slate-700">
+                                    <i class="fa-regular ${obj.hidden ? 'fa-eye-slash text-rose-500' : 'fa-eye'}"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+            }
+
+            updateSelectedProp(key, val) {
+                const obj = this.getObj(this.selectedId);
+                if (!obj) return;
+                this.saveSnapshot();
+                obj[key] = val;
+                this.render();
+            }
+
+            toggleSelectedProp(key) {
+                const obj = this.getObj(this.selectedId);
+                if (!obj) return;
+                this.saveSnapshot();
+                obj[key] = !obj[key];
+                this.render();
+            }
+
+            toggleObjectHidden(id) {
+                const obj = this.getObj(id);
+                if (!obj) return;
+                this.saveSnapshot();
+                obj.hidden = !obj.hidden;
+                this.render();
+            }
+
+            toggleAllAuxiliaryLines() {
+                this.saveSnapshot();
+                const dashedLines = this.objects.filter(o => (o.kind === 'line' || o.kind === 'circle') && o.dash !== 'solid');
+                const anyVisible = dashedLines.some(o => !o.hidden);
+                dashedLines.forEach(o => o.hidden = anyVisible);
+                this.render();
+            }
+
+            deleteSelected() {
+                if (!this.selectedId) return;
+                this.saveSnapshot();
+                const toDelete = new Set([this.selectedId]);
+
+                // Cascade delete dependents
+                let added = true;
+                while (added) {
+                    added = false;
+                    for (const o of this.objects) {
+                        if (!toDelete.has(o.id) && o.parents && o.parents.some(p => toDelete.has(p))) {
+                            toDelete.add(o.id);
+                            added = true;
+                        }
+                    }
+                }
+
+                this.objects = this.objects.filter(o => !toDelete.has(o.id));
+                this.selectedId = null;
+                this.render();
+            }
+
+            // =========================================================================
+            // TEMPLATES & PARAMETERIZED CONSTRUCTIONS
+            // =========================================================================
+            switchLeftTab(tab) {
+                const isTools = tab === 'tools';
+                document.getElementById('leftPanelTools').classList.toggle('hidden', !isTools);
+                document.getElementById('leftPanelTemplates').classList.toggle('hidden', isTools);
+                document.getElementById('tabBtnTools').className = isTools
+                    ? 'py-1.5 text-xs font-semibold rounded-md bg-white text-blue-700 shadow-sm border border-slate-200/80 transition'
+                    : 'py-1.5 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900 transition';
+                document.getElementById('tabBtnTemplates').className = !isTools
+                    ? 'py-1.5 text-xs font-semibold rounded-md bg-white text-blue-700 shadow-sm border border-slate-200/80 transition'
+                    : 'py-1.5 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900 transition';
+            }
+
+            loadTemplate(name, recordHistory = true) {
+                if (recordHistory) this.saveSnapshot();
+                this.objects = [];
+                this.selectedId = null;
+
+                if (name === 'orthocenter') {
+                    // Circle (O) with inscribed acute triangle ABC, altitudes AD, BE, CF, orthocenter H, midpoint M
+                    const O = this.addPoint({ rule: 'free', x: 0, y: 0, label: 'O', labelOffset: { dx: 12, dy: -8 } });
+                    const Rpt = this.addPoint({ rule: 'free', x: 4.2, y: 0, label: 'R', showLabel: false });
+                    Rpt.hidden = true;
+                    const cir = this.addCircle({ rule: 'center_point', parents: [O.id, Rpt.id] });
+
+                    const A = this.addPoint({ rule: 'on_circle', parents: [cir.id], angleParam: 1.35, label: 'A', labelOffset: { dx: 4, dy: -16 } });
+                    const B = this.addPoint({ rule: 'on_circle', parents: [cir.id], angleParam: 3.65, label: 'B', labelOffset: { dx: -16, dy: 12 } });
+                    const C = this.addPoint({ rule: 'on_circle', parents: [cir.id], angleParam: 5.75, label: 'C', labelOffset: { dx: 16, dy: 12 } });
+
+                    const sAB = this.addLine({ rule: 'segment', parents: [A.id, B.id] });
+                    const sBC = this.addLine({ rule: 'segment', parents: [B.id, C.id] });
+                    const sCA = this.addLine({ rule: 'segment', parents: [C.id, A.id] });
+                    this.addPolygon([A.id, B.id, C.id]);
+
+                    const D = this.addPoint({ rule: 'projection', parents: [A.id, sBC.id], label: 'D', labelOffset: { dx: 0, dy: 16 } });
+                    const E = this.addPoint({ rule: 'projection', parents: [B.id, sCA.id], label: 'E', labelOffset: { dx: 15, dy: -6 } });
+                    const F = this.addPoint({ rule: 'projection', parents: [C.id, sAB.id], label: 'F', labelOffset: { dx: -16, dy: -6 } });
+
+                    const sAD = this.addLine({ rule: 'segment', parents: [A.id, D.id], dash: 'solid', width: 1.4 });
+                    const sBE = this.addLine({ rule: 'segment', parents: [B.id, E.id], dash: 'solid', width: 1.4 });
+                    this.addLine({ rule: 'segment', parents: [C.id, F.id], dash: 'solid', width: 1.4 });
+
+                    this.addRightAngleMark(A.id, D.id, C.id);
+                    this.addRightAngleMark(B.id, E.id, C.id);
+                    this.addRightAngleMark(C.id, F.id, B.id);
+
+                    const H = this.addPoint({ rule: 'intersection', parents: [sAD.id, sBE.id], label: 'H', labelOffset: { dx: -14, dy: 12 } });
+                    const M = this.addPoint({ rule: 'midpoint', parents: [B.id, C.id], label: 'M', labelOffset: { dx: 0, dy: 16 } });
+                    this.addLine({ rule: 'segment', parents: [O.id, M.id], dash: 'dashed', width: 1.4 });
+                    this.addRightAngleMark(O.id, M.id, C.id);
+                }
+
+                else if (name === 'tangent') {
+                    const O = this.addPoint({ rule: 'free', x: 2.2, y: 0, label: 'O', labelOffset: { dx: 12, dy: -10 } });
+                    const Rpt = this.addPoint({ rule: 'free', x: 2.2, y: 3.0, showLabel: false });
+                    Rpt.hidden = true;
+                    const cir = this.addCircle({ rule: 'center_point', parents: [O.id, Rpt.id] });
+
+                    const M = this.addPoint({ rule: 'free', x: -4.2, y: 0, label: 'M', labelOffset: { dx: -16, dy: 0 } });
+                    const I = this.addPoint({ rule: 'midpoint', parents: [M.id, O.id], label: 'I', showLabel: false });
+                    I.hidden = true;
+                    const auxCir = this.addCircle({ rule: 'center_point', parents: [I.id, O.id], dash: 'dotted' });
+                    auxCir.hidden = true;
+
+                    const A = this.addPoint({ rule: 'intersection', parents: [cir.id, auxCir.id], branchIndex: 0, label: 'A', labelOffset: { dx: 0, dy: -16 } });
+                    const B = this.addPoint({ rule: 'intersection', parents: [cir.id, auxCir.id], branchIndex: 1, label: 'B', labelOffset: { dx: 0, dy: 16 } });
+
+                    this.addLine({ rule: 'segment', parents: [M.id, A.id] });
+                    this.addLine({ rule: 'segment', parents: [M.id, B.id] });
+                    this.addLine({ rule: 'segment', parents: [O.id, A.id], dash: 'dashed' });
+                    this.addLine({ rule: 'segment', parents: [O.id, B.id], dash: 'dashed' });
+                    const sMO = this.addLine({ rule: 'segment', parents: [M.id, O.id] });
+                    const sAB = this.addLine({ rule: 'segment', parents: [A.id, B.id] });
+
+                    const H = this.addPoint({ rule: 'intersection', parents: [sMO.id, sAB.id], label: 'H', labelOffset: { dx: 12, dy: 14 } });
+                    this.addRightAngleMark(M.id, A.id, O.id);
+                    this.addRightAngleMark(M.id, B.id, O.id);
+                    this.addRightAngleMark(A.id, H.id, O.id);
+                }
+
+                else if (name === 'right_triangle') {
+                    const B = this.addPoint({ rule: 'free', x: -4, y: -2, label: 'B', labelOffset: { dx: -16, dy: 12 } });
+                    const C = this.addPoint({ rule: 'free', x: 4, y: -2, label: 'C', labelOffset: { dx: 16, dy: 12 } });
+                    const M = this.addPoint({ rule: 'midpoint', parents: [B.id, C.id], label: 'M', showLabel: false });
+                    M.hidden = true;
+                    const semi = this.addCircle({ rule: 'center_point', parents: [M.id, C.id] });
+                    semi.hidden = true;
+
+                    const A = this.addPoint({ rule: 'on_circle', parents: [semi.id], angleParam: 1.95, label: 'A', labelOffset: { dx: 0, dy: -16 } });
+                    const sAB = this.addLine({ rule: 'segment', parents: [A.id, B.id] });
+                    const sBC = this.addLine({ rule: 'segment', parents: [B.id, C.id] });
+                    const sCA = this.addLine({ rule: 'segment', parents: [C.id, A.id] });
+                    this.addPolygon([A.id, B.id, C.id]);
+
+                    const H = this.addPoint({ rule: 'projection', parents: [A.id, sBC.id], label: 'H', labelOffset: { dx: 0, dy: 16 } });
+                    const D = this.addPoint({ rule: 'projection', parents: [H.id, sAB.id], label: 'D', labelOffset: { dx: -15, dy: -8 } });
+                    const E = this.addPoint({ rule: 'projection', parents: [H.id, sCA.id], label: 'E', labelOffset: { dx: 15, dy: -8 } });
+
+                    this.addLine({ rule: 'segment', parents: [A.id, H.id] });
+                    this.addLine({ rule: 'segment', parents: [H.id, D.id], dash: 'dashed' });
+                    this.addLine({ rule: 'segment', parents: [H.id, E.id], dash: 'dashed' });
+
+                    this.addRightAngleMark(B.id, A.id, C.id);
+                    this.addRightAngleMark(A.id, H.id, C.id);
+                    this.addRightAngleMark(H.id, D.id, A.id);
+                    this.addRightAngleMark(H.id, E.id, A.id);
+                }
+
+                else if (name === 'pyramid_3d') {
+                    // 3D Pyramid S.ABCD projected onto plane with hidden dashed edges
+                    const A = this.addPoint({ rule: 'free', x: -2.2, y: 0.4, label: 'A', labelOffset: { dx: -14, dy: -8 } });
+                    const B = this.addPoint({ rule: 'free', x: -4.2, y: -2.2, label: 'B', labelOffset: { dx: -16, dy: 10 } });
+                    const C = this.addPoint({ rule: 'free', x: 2.2, y: -2.2, label: 'C', labelOffset: { dx: 14, dy: 10 } });
+                    const D = this.addPoint({ rule: 'free', x: 4.2, y: 0.4, label: 'D', labelOffset: { dx: 16, dy: -6 } });
+                    const S = this.addPoint({ rule: 'free', x: -2.2, y: 4.4, label: 'S', labelOffset: { dx: 0, dy: -16 } });
+
+                    // Hidden lines (dashed)
+                    this.addLine({ rule: 'segment', parents: [S.id, A.id], dash: 'dashed' });
+                    this.addLine({ rule: 'segment', parents: [A.id, B.id], dash: 'dashed' });
+                    this.addLine({ rule: 'segment', parents: [A.id, D.id], dash: 'dashed' });
+                    const sAC = this.addLine({ rule: 'segment', parents: [A.id, C.id], dash: 'dashed' });
+                    const sBD = this.addLine({ rule: 'segment', parents: [B.id, D.id], dash: 'dashed' });
+
+                    // Visible lines (solid)
+                    this.addLine({ rule: 'segment', parents: [S.id, B.id] });
+                    this.addLine({ rule: 'segment', parents: [S.id, C.id] });
+                    this.addLine({ rule: 'segment', parents: [S.id, D.id] });
+                    this.addLine({ rule: 'segment', parents: [B.id, C.id] });
+                    this.addLine({ rule: 'segment', parents: [C.id, D.id] });
+
+                    const O = this.addPoint({ rule: 'intersection', parents: [sAC.id, sBD.id], label: 'O', labelOffset: { dx: 0, dy: 16 } });
+                    this.addLine({ rule: 'segment', parents: [S.id, O.id], dash: 'dashed' });
+                    this.addRightAngleMark(S.id, A.id, D.id);
+                }
+
+                this.fitToView();
+                this.render();
+            }
+
+            constructParameterizedTriangle() {
+                const c = parseFloat(document.getElementById('paramAB').value) || 5;
+                const a = parseFloat(document.getElementById('paramBC').value) || 7;
+                const b = parseFloat(document.getElementById('paramCA').value) || 6;
+
+                if (a + b <= c || a + c <= b || b + c <= a) {
+                    this.showToast('Ba cạnh không thỏa mãn bất đẳng thức tam giác!');
+                    return;
+                }
+
+                this.saveSnapshot();
+                this.objects = [];
+                this.selectedId = null;
+
+                // Place B at (-a/2, -2) and C at (a/2, -2)
+                const bx = -a / 2, by = -2;
+                const cx = a / 2, cy = -2;
+                const cosB = (a * a + c * c - b * b) / (2 * a * c);
+                const sinB = Math.sqrt(Math.max(0, 1 - cosB * cosB));
+                const ax = bx + c * cosB;
+                const ay = by + c * sinB;
+
+                const B = this.addPoint({ rule: 'free', x: bx, y: by, label: 'B', labelOffset: { dx: -15, dy: 12 } });
+                const C = this.addPoint({ rule: 'free', x: cx, y: cy, label: 'C', labelOffset: { dx: 15, dy: 12 } });
+                const A = this.addPoint({ rule: 'free', x: ax, y: ay, label: 'A', labelOffset: { dx: 0, dy: -16 } });
+
+                this.addLine({ rule: 'segment', parents: [A.id, B.id] });
+                this.addLine({ rule: 'segment', parents: [B.id, C.id] });
+                this.addLine({ rule: 'segment', parents: [C.id, A.id] });
+                this.addPolygon([A.id, B.id, C.id]);
+
+                this.fitToView();
+                this.render();
+                this.showToast(`Đã dựng ΔABC với AB=${c}, BC=${a}, CA=${b}`);
+            }
+
+            // =========================================================================
+            // VIEWPORT NAVIGATION (ZOOM / PAN / FIT)
+            // =========================================================================
+            zoomBy(factor, centerX = null, centerY = null) {
+                const rect = this.svg.getBoundingClientRect();
+                const cx = centerX !== null ? centerX : rect.width / 2;
+                const cy = centerY !== null ? centerY : rect.height / 2;
+
+                const newZoom = Math.min(4.0, Math.max(0.25, this.zoom * factor));
+                const actualFactor = newZoom / this.zoom;
+
+                this.panX = cx - (cx - this.panX) * actualFactor;
+                this.panY = cy - (cy - this.panY) * actualFactor;
+                this.zoom = newZoom;
+
+                document.getElementById('zoomPercentDisplay').textContent = `${Math.round(this.zoom * 100)}%`;
+                this.render();
+            }
+
+            fitToView() {
+                const pts = this.objects.filter(o => o.kind === 'point' && !o.hidden && o.valid);
+                const rect = this.svg.getBoundingClientRect();
+                const w = rect.width || 900;
+                const h = rect.height || 650;
+
+                if (pts.length === 0) {
+                    this.zoom = 1.0;
+                    this.panX = w / 2;
+                    this.panY = h / 2;
+                    this.render();
+                    return;
+                }
+
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                for (const p of pts) {
+                    minX = Math.min(minX, p.x);
+                    maxX = Math.max(maxX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxY = Math.max(maxY, p.y);
+                }
+                for (const c of this.objects.filter(o => o.kind === 'circle' && !o.hidden && o.valid)) {
+                    const cg = this.getCircleGeometry(c);
+                    if (cg) {
+                        minX = Math.min(minX, cg.cx - cg.r);
+                        maxX = Math.max(maxX, cg.cx + cg.r);
+                        minY = Math.min(minY, cg.cy - cg.r);
+                        maxY = Math.max(maxY, cg.cy + cg.r);
+                    }
+                }
+
+                const spanX = Math.max(4, maxX - minX);
+                const spanY = Math.max(4, maxY - minY);
+                const pad = 140;
+
+                const zoomX = (w - pad * 2) / (spanX * this.unitPixels);
+                const zoomY = (h - pad * 2) / (spanY * this.unitPixels);
+                this.zoom = Math.min(2.2, Math.max(0.4, Math.min(zoomX, zoomY)));
+
+                const midX = (minX + maxX) / 2;
+                const midY = (minY + maxY) / 2;
+                this.panX = w / 2 - midX * this.unitPixels * this.zoom;
+                this.panY = h / 2 + midY * this.unitPixels * this.zoom;
+
+                document.getElementById('zoomPercentDisplay').textContent = `${Math.round(this.zoom * 100)}%`;
+                this.render();
+            }
+
+            toggleGrid() {
+                this.showGrid = !this.showGrid;
+                const btn = document.getElementById('btnGrid');
+                btn.className = this.showGrid
+                    ? 'px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition flex items-center gap-1.5'
+                    : 'px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 border border-slate-200 transition flex items-center gap-1.5';
+                this.render();
+            }
+
+            clearCanvasConfirm() {
+                this.saveSnapshot();
+                this.objects = [];
+                this.selectedId = null;
+                this.render();
+                this.showToast('Đã xóa làm mới bản vẽ (Bấm Ctrl+Z nếu muốn khôi phục)');
+            }
+
+            // =========================================================================
+            // EXPORT 1: WORD PNG & VECTOR SVG (TIGHT AUTO-CROP)
+            // =========================================================================
+            buildCroppedSvgString(monochrome = false) {
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+                for (const o of this.objects) {
+                    if (o.hidden || !o.valid) continue;
+                    if (o.kind === 'point') {
+                        const s = this.worldToScreen(o.x, o.y);
+                        minX = Math.min(minX, s.x - 28);
+                        maxX = Math.max(maxX, s.x + 28);
+                        minY = Math.min(minY, s.y - 28);
+                        maxY = Math.max(maxY, s.y + 28);
+                    } else if (o.kind === 'circle') {
+                        const cg = this.getCircleGeometry(o);
+                        if (cg) {
+                            const sc = this.worldToScreen(cg.cx, cg.cy);
+                            const sr = cg.r * this.unitPixels * this.zoom;
+                            minX = Math.min(minX, sc.x - sr - 15);
+                            maxX = Math.max(maxX, sc.x + sr + 15);
+                            minY = Math.min(minY, sc.y - sr - 15);
+                            maxY = Math.max(maxY, sc.y + sr + 15);
+                        }
+                    }
+                }
+
+                if (!isFinite(minX)) {
+                    minX = 0; maxX = 400; minY = 0; maxY = 300;
+                }
+
+                const width = Math.ceil(maxX - minX);
+                const height = Math.ceil(maxY - minY);
+
+                // Clone layers cleanly without selection halos or grid
+                const prevSelected = this.selectedId;
+                const prevHovered = this.hoveredId;
+                this.selectedId = null;
+                this.hoveredId = null;
+                this.render();
+
+                let innerContent =
+                    this.polygonLayer.innerHTML +
+                    this.angleLayer.innerHTML +
+                    this.circleLayer.innerHTML +
+                    this.lineLayer.innerHTML +
+                    this.pointLayer.innerHTML +
+                    this.labelLayer.innerHTML;
+
+                if (monochrome) {
+                    innerContent = innerContent.replace(/stroke="#[0-9a-fA-F]{6}"/g, 'stroke="#000000"');
+                    innerContent = innerContent.replace(/fill="#[0-9a-fA-F]{6}"/g, 'fill="#000000"');
+                    innerContent = innerContent.replace(/stroke="#ffffff"/g, 'stroke="#ffffff"');
+                }
+
+                this.selectedId = prevSelected;
+                this.hoveredId = prevHovered;
+                this.render();
+
+                const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX.toFixed(1)} ${minY.toFixed(1)} ${width} ${height}" width="${width}" height="${height}">
+                    <style>
+                        .geo-label {
+                            font-family: 'Times New Roman', Times, serif;
+                            font-style: italic;
+                            font-weight: 600;
+                            paint-order: stroke;
+                            stroke: rgba(255,255,255,0.92);
+                            stroke-width: 4px;
+                        }
+                    </style>
+                    ${innerContent}
+                </svg>`;
+
+                return { svgString, width, height };
+            }
+
+            openImageExportModal() {
+                document.getElementById('imageExportModal').classList.remove('hidden');
+                document.getElementById('imageExportModal').classList.add('flex');
+                this.refreshExportPreview();
+            }
+
+            refreshExportPreview() {
+                const mono = document.getElementById('exportBlackWhiteCheck').checked;
+                const { svgString } = this.buildCroppedSvgString(mono);
+                document.getElementById('exportSvgPreviewBox').innerHTML = svgString;
+            }
+
+            async renderSvgToPngBlob() {
+                const mono = document.getElementById('exportBlackWhiteCheck').checked;
+                const scale = parseFloat(document.getElementById('exportScaleSelect').value) || 3;
+                const { svgString, width, height } = this.buildCroppedSvgString(mono);
+
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                    const url = URL.createObjectURL(svgBlob);
+
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width * scale;
+                        canvas.height = height * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.scale(scale, scale);
+                        ctx.drawImage(img, 0, 0);
+                        URL.revokeObjectURL(url);
+                        canvas.toBlob(blob => resolve(blob), 'image/png');
+                    };
+                    img.src = url;
+                });
+            }
+
+            async copyPngToClipboard() {
+                try {
+                    const blob = await this.renderSvgToPngBlob();
+                    if (navigator.clipboard && window.ClipboardItem) {
+                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                        this.showToast('Đã chép ảnh PNG trong suốt! Mở Word và bấm Ctrl + V.');
+                    } else {
+                        this.downloadPng();
+                    }
+                } catch (err) {
+                    this.downloadPng();
+                }
+            }
+
+            async downloadPng() {
+                const blob = await this.renderSvgToPngBlob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'hinh-hoc-de-thi.png';
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showToast('Đã tải xuống file ảnh PNG!');
+            }
+
+            downloadSvg() {
+                const mono = document.getElementById('exportBlackWhiteCheck').checked;
+                const { svgString } = this.buildCroppedSvgString(mono);
+                const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'hinh-hoc-vector.svg';
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showToast('Đã tải xuống file vector SVG!');
+            }
+
+            // =========================================================================
+            // EXPORT 2: AUTOMATIC TKZ-EUCLIDE / TIKZ CODE GENERATOR
+            // =========================================================================
+            openLatexModal() {
+                document.getElementById('latexExportModal').classList.remove('hidden');
+                document.getElementById('latexExportModal').classList.add('flex');
+                this.generateLatexCode();
+            }
+
+            generateLatexCode() {
+                const scale = parseFloat(document.getElementById('latexScaleInput').value) || 1.0;
+                const lines = [];
+                lines.push(`% Mã LaTeX sinh tự động từ Xưởng Vẽ Hình Học Phẳng`);
+                lines.push(`% Khai báo trong preamble: \\usepackage{tkz-euclide}`);
+                lines.push(`\\begin{tikzpicture}[scale=${scale}, line join=round, line cap=round]`);
+
+                // 1. Points definition
+                lines.push(`  % --- 1. Định nghĩa các điểm ---`);
+                for (const o of this.objects) {
+                    if (o.kind !== 'point' || !o.valid) continue;
+                    const name = o.label || o.id;
+                    if (o.rule === 'midpoint') {
+                        const p1 = this.getObjLabel(o.parents[0]);
+                        const p2 = this.getObjLabel(o.parents[1]);
+                        lines.push(`  \\tkzDefMidPoint(${p1},${p2}) \\tkzGetPoint{${name}}`);
+                    } else {
+                        lines.push(`  \\tkzDefPoint(${o.x.toFixed(2)},${o.y.toFixed(2)}){${name}}`);
+                    }
+                }
+
+                // 2. Circles
+                const circles = this.objects.filter(o => o.kind === 'circle' && !o.hidden && o.valid);
+                if (circles.length > 0) {
+                    lines.push(`\n  % --- 2. Vẽ đường tròn ---`);
+                    for (const c of circles) {
+                        const center = this.getObjLabel(c.parents[0]);
+                        const pt = this.getObjLabel(c.parents[1]);
+                        const style = c.dash === 'dashed' ? '[dashed]' : (c.dash === 'dotted' ? '[dotted]' : '');
+                        lines.push(`  \\tkzDrawCircle${style}(${center},${pt})`);
+                    }
+                }
+
+                // 3. Segments & Lines
+                const segs = this.objects.filter(o => o.kind === 'line' && !o.hidden && o.valid);
+                if (segs.length > 0) {
+                    lines.push(`\n  % --- 3. Vẽ các đoạn thẳng & đường thẳng ---`);
+                    for (const s of segs) {
+                        const p1 = this.getObjLabel(s.parents[0]);
+                        const p2 = this.getObjLabel(s.parents[1]);
+                        const style = s.dash === 'dashed' ? '[dashed]' : (s.dash === 'dotted' ? '[dotted]' : '');
+                        if (s.rule === 'segment') {
+                            lines.push(`  \\tkzDrawSegment${style}(${p1},${p2})`);
+                            if (s.ticks > 0) {
+                                const mark = '|'.repeat(s.ticks);
+                                lines.push(`  \\tkzMarkSegment[pos=0.5, mark=${mark}](${p1},${p2})`);
+                            }
+                        } else if (s.rule === 'two_points') {
+                            lines.push(`  \\tkzDrawLine${style}(${p1},${p2})`);
+                        }
+                    }
+                }
+
+                // 4. Right angle marks
+                const rightAngles = this.objects.filter(o => o.kind === 'angle_right' && !o.hidden && o.valid);
+                if (rightAngles.length > 0) {
+                    lines.push(`\n  % --- 4. Ký hiệu góc vuông ---`);
+                    for (const ra of rightAngles) {
+                        const p1 = this.getObjLabel(ra.parents[0]);
+                        const v = this.getObjLabel(ra.parents[1]);
+                        const p2 = this.getObjLabel(ra.parents[2]);
+                        lines.push(`  \\tkzMarkRightAngle[size=0.25](${p1},${v},${p2})`);
+                    }
+                }
+
+                // 5. Draw points & labels with exact angle offset
+                const visiblePts = this.objects.filter(o => o.kind === 'point' && !o.hidden && o.valid);
+                if (visiblePts.length > 0) {
+                    lines.push(`\n  % --- 5. Hiển thị điểm và nhãn ---`);
+                    const ptNames = visiblePts.map(p => p.label).join(',');
+                    lines.push(`  \\tkzDrawPoints[fill=black, size=3.5](${ptNames})`);
+                    for (const p of visiblePts) {
+                        if (!p.showLabel || !p.label) continue;
+                        const dx = p.labelOffset?.dx || 10;
+                        const dy = -(p.labelOffset?.dy || -10); // Invert screen Y to math Y
+                        const ang = Math.round((Math.atan2(dy, dx) * 180) / Math.PI);
+                        lines.push(`  \\tkzLabelPoint[label=${ang}:$${p.label}$](${p.label}){}`);
+                    }
+                }
+
+                lines.push(`\\end{tikzpicture}`);
+                document.getElementById('latexCodeOutput').textContent = lines.join('\n');
+            }
+
+            copyLatexCode() {
+                const code = document.getElementById('latexCodeOutput').textContent;
+                const textarea = document.createElement('textarea');
+                textarea.value = code;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                this.showToast('Đã sao chép mã LaTeX (tkz-euclide) vào bộ nhớ tạm!');
+            }
+
+            closeModals() {
+                document.getElementById('imageExportModal').classList.add('hidden');
+                document.getElementById('imageExportModal').classList.remove('flex');
+                document.getElementById('latexExportModal').classList.add('hidden');
+                document.getElementById('latexExportModal').classList.remove('flex');
+            }
+
+            // =========================================================================
+            // UNDO / REDO & JSON STORAGE
+            // =========================================================================
+            saveSnapshot() {
+                this.history.push(JSON.stringify(this.objects));
+                if (this.history.length > 40) this.history.shift();
+                this.redoStack = [];
+                this.updateHistoryButtons();
+            }
+
+            undo() {
+                if (this.history.length === 0) return;
+                this.redoStack.push(JSON.stringify(this.objects));
+                const prev = this.history.pop();
+                this.objects = JSON.parse(prev);
+                this.selectedId = null;
+                this.updateHistoryButtons();
+                this.render();
+            }
+
+            redo() {
+                if (this.redoStack.length === 0) return;
+                this.history.push(JSON.stringify(this.objects));
+                const next = this.redoStack.pop();
+                this.objects = JSON.parse(next);
+                this.selectedId = null;
+                this.updateHistoryButtons();
+                this.render();
+            }
+
+            updateHistoryButtons() {
+                document.getElementById('btnUndo').disabled = this.history.length === 0;
+                document.getElementById('btnRedo').disabled = this.redoStack.length === 0;
+            }
+
+            saveToLocalStorage() {
+                try {
+                    localStorage.setItem('ve_hhphang_state_v1', JSON.stringify(this.objects));
+                } catch (e) {}
+            }
+
+            deserialize(jsonStr, record = true) {
+                if (record) this.saveSnapshot();
+                this.objects = JSON.parse(jsonStr);
+                this.selectedId = null;
+                this.render();
+            }
+
+            saveJSON() {
+                const data = JSON.stringify(this.objects, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ban-ve-hinh-hoc.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showToast('Đã lưu file dự án .JSON!');
+            }
+
+            loadJSON(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        this.deserialize(e.target.result);
+                        this.fitToView();
+                        this.showToast('Đã tải bản vẽ từ file JSON!');
+                    } catch (err) {
+                        this.showToast('File JSON không hợp lệ!');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            showToast(msg) {
+                const toast = document.getElementById('toastNotification');
+                document.getElementById('toastText').textContent = msg;
+                toast.classList.remove('opacity-0');
+                clearTimeout(this.toastTimer);
+                this.toastTimer = setTimeout(() => {
+                    toast.classList.add('opacity-0');
+                }, 2800);
+            }
+
+            // =========================================================================
+            // EVENT LISTENERS (MOUSE, TOUCH, 2-LETTER SHORTCUTS)
+            // =========================================================================
+            bindEvents() {
+                // Mouse Down on SVG
+                this.svg.addEventListener('mousedown', (e) => {
+                    const rect = this.svg.getBoundingClientRect();
+                    const sx = e.clientX - rect.left;
+                    const sy = e.clientY - rect.top;
+
+                    // Middle click or Space+Left click -> Pan
+                    if (e.button === 1 || (e.button === 0 && this.spacePressed)) {
+                        this.dragMode = 'pan';
+                        this.dragStartMouse = { x: e.clientX, y: e.clientY };
+                        this.dragStartPan = { x: this.panX, y: this.panY };
+                        this.svg.style.cursor = 'grabbing';
+                        return;
+                    }
+
+                    if (e.button !== 0) return;
+
+                    const hit = this.findHitObject(sx, sy);
+
+                    // Always allow dragging labels in any mode
+                    if (hit && hit.type === 'label') {
+                        this.saveSnapshot();
+                        this.dragMode = 'label';
+                        this.dragTargetId = hit.obj.id;
+                        this.selectObject(hit.obj.id);
+                        return;
+                    }
+
+                    // In Select Mode ('CH'), allow dragging free/constrained points or panning empty canvas
+                    if (this.activeTool === 'CH') {
+                        if (hit && hit.type === 'point') {
+                            const pt = hit.obj;
+                            if (['free', 'on_line', 'on_circle'].includes(pt.rule)) {
+                                this.saveSnapshot();
+                                this.dragMode = 'point';
+                                this.dragTargetId = pt.id;
+                            }
+                            this.selectObject(pt.id);
+                        } else if (hit && hit.type === 'shape') {
+                            this.selectObject(hit.obj.id);
+                        } else {
+                            this.selectObject(null);
+                            this.dragMode = 'pan';
+                            this.dragStartMouse = { x: e.clientX, y: e.clientY };
+                            this.dragStartPan = { x: this.panX, y: this.panY };
+                        }
+                        return;
+                    }
+
+                    // Otherwise execute active construction tool click
+                    this.handleCanvasClick(e);
+                });
+
+                // Mouse Move on Window
+                window.addEventListener('mousemove', (e) => {
+                    const rect = this.svg.getBoundingClientRect();
+                    const sx = e.clientX - rect.left;
+                    const sy = e.clientY - rect.top;
+                    this.mouseWorld = this.screenToWorld(sx, sy);
+
+                    document.getElementById('mouseCoordDisplay').textContent =
+                        `(${this.mouseWorld.x.toFixed(1)}, ${this.mouseWorld.y.toFixed(1)})`;
+
+                    if (this.dragMode === 'pan') {
+                        this.panX = this.dragStartPan.x + (e.clientX - this.dragStartMouse.x);
+                        this.panY = this.dragStartPan.y + (e.clientY - this.dragStartMouse.y);
+                        this.render();
+                        return;
+                    }
+
+                    if (this.dragMode === 'label') {
+                        const pt = this.getObj(this.dragTargetId);
+                        if (pt) {
+                            const sp = this.worldToScreen(pt.x, pt.y);
+                            pt.labelOffset = {
+                                dx: Math.max(-45, Math.min(45, sx - sp.x)),
+                                dy: Math.max(-45, Math.min(45, sy - sp.y))
+                            };
+                            this.render();
+                        }
+                        return;
+                    }
+
+                    if (this.dragMode === 'point') {
+                        const pt = this.getObj(this.dragTargetId);
+                        if (pt) {
+                            if (pt.rule === 'free') {
+                                pt.x = this.mouseWorld.x;
+                                pt.y = this.mouseWorld.y;
+                            } else if (pt.rule === 'on_line') {
+                                const line = this.getObj(pt.parents[0]);
+                                const lg = this.getLineGeometry(line);
+                                if (lg) {
+                                    const proj = this.projectPointOnLine(this.mouseWorld.x, this.mouseWorld.y, lg.x1, lg.y1, lg.x2, lg.y2);
+                                    pt.tParam = lg.subType === 'segment' ? Math.max(0, Math.min(1, proj.t)) : proj.t;
+                                }
+                            } else if (pt.rule === 'on_circle') {
+                                const circle = this.getObj(pt.parents[0]);
+                                const cg = this.getCircleGeometry(circle);
+                                if (cg) {
+                                    pt.angleParam = Math.atan2(this.mouseWorld.y - cg.cy, this.mouseWorld.x - cg.cx);
+                                }
+                            }
+                            this.render();
+                        }
+                        return;
+                    }
+
+                    // Hover feedback
+                    const hit = this.findHitObject(sx, sy);
+                    const newHoverId = hit ? hit.obj.id : null;
+                    if (newHoverId !== this.hoveredId || this.toolPoints.length > 0) {
+                        this.hoveredId = newHoverId;
+                        this.render();
+                    }
+                });
+
+                window.addEventListener('mouseup', () => {
+                    this.dragMode = null;
+                    this.dragTargetId = null;
+                    this.svg.style.cursor = this.spacePressed ? 'grab' : 'default';
+                });
+
+                // Mouse Wheel Zoom
+                this.svg.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const rect = this.svg.getBoundingClientRect();
+                    const sx = e.clientX - rect.left;
+                    const sy = e.clientY - rect.top;
+                    const factor = e.deltaY < 0 ? 1.12 : 0.89;
+                    this.zoomBy(factor, sx, sy);
+                }, { passive: false });
+
+                // Keyboard Shortcuts (2-letter Vietnamese system + Undo/Redo/Esc/F)
+                window.addEventListener('keydown', (e) => {
+                    // Ignore when typing inside inputs
+                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+
+                    if (e.code === 'Space') {
+                        this.spacePressed = true;
+                        this.svg.style.cursor = 'grab';
+                        return;
+                    }
+
+                    if (e.key === 'Escape') {
+                        this.closeModals();
+                        this.setTool('CH');
+                        return;
+                    }
+
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                        e.preventDefault();
+                        this.undo();
+                        return;
+                    }
+
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+                        e.preventDefault();
+                        this.redo();
+                        return;
+                    }
+
+                    if (e.key === 'Delete' || e.key === 'Backspace') {
+                        this.deleteSelected();
+                        return;
+                    }
+
+                    const ch = e.key.toUpperCase();
+                    if (ch === 'F' && this.keyBuffer === '') {
+                        this.fitToView();
+                        return;
+                    }
+
+                    // 2-Letter Tool Shortcut Buffer
+                    if (/^[A-Z]$/.test(ch) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                        this.keyBuffer += ch;
+                        document.getElementById('keyBufferText').textContent = this.keyBuffer + (this.keyBuffer.length === 1 ? '_' : '');
+
+                        clearTimeout(this.keyBufferTimer);
+                        if (this.keyBuffer.length === 2) {
+                            const code = this.keyBuffer;
+                            this.keyBuffer = '';
+                            if (this.tools[code]) {
+                                this.setTool(code);
+                                this.showToast(`Chuyển sang công cụ: ${this.tools[code].name} (${code})`);
+                            } else {
+                                document.getElementById('keyBufferText').textContent = this.activeTool;
+                            }
+                        } else {
+                            this.keyBufferTimer = setTimeout(() => {
+                                this.keyBuffer = '';
+                                document.getElementById('keyBufferText').textContent = this.activeTool;
+                            }, 1200);
+                        }
+                    }
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    if (e.code === 'Space') {
+                        this.spacePressed = false;
+                        this.svg.style.cursor = 'default';
+                    }
+                });
+
+                window.addEventListener('resize', () => this.render());
+            }
+        }
+
+        // Start Studio on window load
+        let app;
+        window.onload = function () {
+            app = new GeometryStudioApp();
+        };
+    </script>
+</body>
+</html>
